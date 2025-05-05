@@ -234,6 +234,7 @@ for cat in cats:
   print("    * tree: %s"%treeName)
   # Extract tree from uproot
   t = f[treeName]
+  print(f">>> branches in {treeName}: {t.keys()}")
   if t.num_entries == 0: continue
   
   # Convert tree to pandas dataframe
@@ -318,20 +319,27 @@ for fiducialId in fiducialIds:
   # In the end, the STXS and fiducial in/out splitting should maybe be harmonised, this looks a bit ugly
   if (stxsVar != '') or (opt.doSTXSSplitting): continue
 
-  if fiducialId == True: fidTag = "in"
-  elif fiducialId == False: fidTag = "out"
-  else: fidTag = "incl"
+  if fiducialId == True:
+    fidTag = "in"
+  elif fiducialId == False and opt.doInOutSplitting:
+    fidTag = "out"
+  else:
+    fidTag = "incl"
 
   if opt.doInOutSplitting:
     fiducial_mask = data['fiducialGeometricFlag'] == fiducialId
-    fiducial_mask_syst = sdata['fiducialGeometricFlag'] == fiducialId
+    if opt.doSystematics:
+      fiducial_mask_syst = sdata['fiducialGeometricFlag'] == fiducialId
   else:
     fiducial_mask = data['CMS_hgg_mass'] > 0 # Basically a true mask because we are all inclusive
-    fiducial_mask_syst = sdata['CMS_hgg_mass'] > 0
+    if opt.doSystematics:
+      fiducial_mask_syst = sdata['CMS_hgg_mass'] > 0
 
   df = data[fiducial_mask]
   if opt.doSystematics: 
     sdf = sdata[fiducial_mask_syst]
+  else:
+    sdf = None
 
   # Define output workspace file
   if opt.outputWSDir is not None:

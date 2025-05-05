@@ -1,19 +1,26 @@
 #!/bin/bash
 
 
+# extract_bins() {
+#     local path="$1"
+#     local bins=()
+
+#     # Use find to search for folders matching the pattern ws_<proc>_<bins>
+#     while IFS= read -r folder; do
+#         # Append the folder name to the bins array
+#         bins+=("$folder")
+#     done < <(find "$path" -type d -name 'ws_*_*' 2>/dev/null)
+
+#     # Output the bins array
+#     printf '%s\n' "${bins[@]}"
+# }
+
 extract_bins() {
     local path="$1"
-    local bins=()
-
-    # Use find to search for folders matching the pattern ws_<proc>_<bins>
-    while IFS= read -r folder; do
-        # Append the folder name to the bins array
-        bins+=("$folder")
-    done < <(find "$path" -type d -name 'ws_*_*' 2>/dev/null)
-
-    # Output the bins array
-    printf '%s\n' "${bins[@]}"
+    # find only depth 1 directories, print basename
+    find "$path" -mindepth 1 -maxdepth 1 -type d -name 'ws_*_*' -printf '%f\n' 2>/dev/null
 }
+
 
 # Check if the correct number of command-line arguments is provided
 if [ "$#" -ne 1 ]; then
