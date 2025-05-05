@@ -103,7 +103,7 @@ for year in years:
 
     # Input flashgg ws
     _inputWSFile = glob.glob("%s/*M%s*_%s.root"%(inputWSDirMap[year],opt.mass,proc))[0]
-    if (len(proc.split("_")) <= 2) and (proc.split("_")[-1] in ["in", "out"]):
+    if (len(proc.split("_")) <= 2) and (proc.split("_")[-1] in ["in", "out", "incl"]):
       _nominalDataName = "%s_%s_%s_%s_%s"%(_proc_s0,procToData(proc.split("_")[-1]),opt.mass,sqrts__,opt.cat)  
     else:
       _nominalDataName = "%s_%s_%s_%s"%(_proc_s0,opt.mass,sqrts__,opt.cat)
@@ -226,6 +226,12 @@ for ir,r in data[data['type']=='sig'].iterrows():
   inputWS = f_in.Get(inputWSName__)
   # Extract nominal RooDataSet and yield
   rdata_nominal = inputWS.data(r.nominalDataName)
+
+  if not rdata_nominal:
+      sys.stderr.write(f"\n*** ERROR: dataset '{r.nominalDataName}' not found in workspace {r.inputWSFile}.\n Available:\n")
+      # List all RooDataSet names in this workspace
+      inputWS.Print("v")   # dump variables, datasets, etc.
+      sys.exit(1)
 
   # Calculate nominal yield, sumw2 and add COW correction for in acceptance events
   contents = ""
