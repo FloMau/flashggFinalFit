@@ -57,6 +57,8 @@ if opt.inputConfig != '':
     options['jobOpts']                 = opt.jobOpts
     options['groupSignalFitJobsByCat'] = opt.groupSignalFitJobsByCat
     options['printOnly']               = opt.printOnly
+
+    print("Chosen options:", options)
   
     #Delete copy of file
     os.system("rm config.py")
@@ -80,16 +82,19 @@ if options['mode'] not in ['fTest','getDiagProc','calcPhotonSyst','signalFit']:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Extract list of filenames
 WSFileNames = extractWSFileNames(options['inputWSDir'])
+print("WSFileNames", WSFileNames)
 if not WSFileNames: leave()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # If proc/cat == auto. Extract processes and categories
 if options['procs'] == "auto":
+  print("\n extractListOfProcs(WSFileNames):", extractListOfProcs(WSFileNames))
   options['procs'] = extractListOfProcs(WSFileNames)
 options['nProcs'] = len(options['procs'].split(","))
 
 if options['cats'] == "auto":
   options['cats'] = extractListOfCats(WSFileNames)
+  print("Found categories:", extractListOfCats(WSFileNames))
 options['nCats'] = len(options['cats'].split(","))
 
 # Extract low and high MH values

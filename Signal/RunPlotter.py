@@ -53,9 +53,10 @@ else:
     catString = opt.cats.split("=")[-1]
   else:
     catString = opt.cats.split(",")
-  for cat in catString.split(","):
-  # for cat in catString:
+  # for cat in catString.split(","):
+  for cat in catString:
     f = "%s/outdir_%s/CMS-HGG_sigfit_%s_%s.root"%(swd__,opt.ext,opt.ext,cat)
+    # f = "%s/outdir_%s/CMS-HGG_sigfit_%s_%s_%s.root"%(swd__,opt.ext,opt.ext,cat,opt.years)
     inputFiles[cat] = f
     if citr == 0:
       w = ROOT.TFile(f).Get("wsig_13TeV")

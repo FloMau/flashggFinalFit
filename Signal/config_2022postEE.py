@@ -1,25 +1,25 @@
 # Config file: options for signal fitting
 signalScriptCfg = {
-  
+
   # Setup
-  'inputWSDir':'../input_output_2022postEE/ws_signal/', # dir storing flashgg workspaces
+  'inputWSDir':'/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation/outputForFinalFits/workspaces/2022postEE/ws_signal/', # dir storing flashgg workspaces
   'procs':'auto', # if auto: inferred automatically from filenames (requires names to be of from *pythia8_{PROC}.root)
   'cats':'auto', # if auto: inferred automatically from (0) workspace
   #'ext':'earlyAnalysis_freeze_include', # output directory extension
-  'ext':'earlyAnalysis_2022postEE', # output directory extension
-  'analysis':'earlyAnalysisInOut', # To specify replacement dataset and XS*BR mapping (defined in ./tools/replacementMap.py and ./tools/XSBRMap.py respectively)
+  'ext':'tth_th_analysis_2022postEE', # output directory extension
+  'analysis':'tth_th_analysis', # To specify replacement dataset and XS*BR mapping (defined in ./tools/replacementMap.py and ./tools/XSBRMap.py respectively)
   'year':'2022postEE', # Use 'combined' if merging all years: not recommended
-  'massPoints':'120,125,130', # You can now run with a single mass point if necessary
+  'massPoints':'125', # You can now run with a single mass point if necessary
 
   #Photon shape systematics  
-  'scales':'ScaleEB,ScaleEE', # separate nuisance per year
-  'scalesCorr':'FNUF,Material', # correlated across years
+  'scales':'', # separate nuisance per year
+  'scalesCorr':'', # correlated across years
   #'scalesGlobal':'NonLinearity,Geant4', # affect all processes equally, correlated across years
   # Removed nonLinearity for HIG-23-014 
-  'scalesGlobal':'Geant4', # affect all processes equally, correlated across years
-  'smears':'Smearing', # separate nuisance per year
+  'scalesGlobal':'', # affect all processes equally, correlated across years
+  'smears':'', # separate nuisance per year
 
   # Job submission options
-  'batch':'condor',  # ['condor_lxplus','condor','SGE','IC','local']
+  'batch':'local', # ['condor_lxplus','condor','SGE','IC','local']
   'queue':'microcentury' # use hep.q for IC
 }
