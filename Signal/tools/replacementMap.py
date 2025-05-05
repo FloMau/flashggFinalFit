@@ -284,6 +284,31 @@ globalReplacementMap["earlyAnalysisInOut"]["catRVMap"]["medium_resolution"]  = "
 globalReplacementMap["earlyAnalysisInOut"]["catRVMap"]["worst_resolution"]   = "worst_resolution"
 
 
+# Early Analysis WITH in/out splitting
+globalReplacementMap["tth_th_analysis"] = od()
+# Wrong vertex stuff
+#globalReplacementMap["tth_th_analysis"]['procWV'] = "GG2H_in"
+# With nico convention (ggh instead of GG2H)
+globalReplacementMap["tth_th_analysis"]['procWV'] = "tth_incl"
+globalReplacementMap["tth_th_analysis"]['catWV'] = "tH_lep_2"
+# Relacement processes for RV
+globalReplacementMap["tth_th_analysis"]['procRVMap'] = od()
+#globalReplacementMap["tth_th_analysis"]["procRVMap"]["best_resolution"] = "GG2H_in"
+#globalReplacementMap["tth_th_analysis"]["procRVMap"]["medium_resolution"] = "GG2H_in"
+#globalReplacementMap["tth_th_analysis"]["procRVMap"]["worst_resolution"] = "GG2H_in"
+# With nico convention (ggh instead of GG2H)
+globalReplacementMap["tth_th_analysis"]["procRVMap"]["tH_lep_1"] = "tth_incl"
+globalReplacementMap["tth_th_analysis"]["procRVMap"]["tH_lep_2"] = "tth_incl"
+globalReplacementMap["tth_th_analysis"]["procRVMap"]["ttH_lep_1"] = "tth_incl"
+globalReplacementMap["tth_th_analysis"]["procRVMap"]["ttH_lep_2"] = "tth_incl"
+
+# Replacement categories for RV
+globalReplacementMap["tth_th_analysis"]["catRVMap"] = od()
+globalReplacementMap["tth_th_analysis"]["catRVMap"]["tH_lep_1"] = "th_lep_1"
+globalReplacementMap["tth_th_analysis"]["catRVMap"]["tH_lep_2"]  = "th_lep_2"
+globalReplacementMap["tth_th_analysis"]["catRVMap"]["ttH_lep_1"] = "tth_lep_1"
+globalReplacementMap["tth_th_analysis"]["catRVMap"]["ttH_lep_2"]  = "tth_lep_2"
+
 ###################################################################################################################################################################################################
 ###################################################################################################################################################################################################
 ###################################################################################################################################################################################################
