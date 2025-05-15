@@ -88,7 +88,7 @@ def plotFTest(ssfs,_opt=1,_outdir='./',_extension='',_proc='',_cat='',_mass='125
   drawCMS(onTop=True, CMSString="Simulation Private Work", sqrts=None)
 
   canv.Update()
-  canv.SaveAs("%s/fTest_%s_%s_%s.png"%(_outdir,_cat,_proc,_extension))
+  # canv.SaveAs("%s/fTest_%s_%s_%s.png"%(_outdir,_cat,_proc,_extension))
   canv.SaveAs("%s/fTest_%s_%s_%s.pdf"%(_outdir,_cat,_proc,_extension))
 
 # Plot reduced chi2 vs nGauss
@@ -140,7 +140,7 @@ def plotFTestResults(ssfs,_opt,_outdir="./",_extension='',_proc='',_cat='',_mass
   drawCMS(onTop=True, CMSString="Simulation Private Work", sqrts=None)
 
   canv.Update()
-  canv.SaveAs("%s/fTest_%s_%s_%s_chi2_vs_nGauss.png"%(_outdir,_cat,_proc,_extension))
+  # canv.SaveAs("%s/fTest_%s_%s_%s_chi2_vs_nGauss.png"%(_outdir,_cat,_proc,_extension))
   canv.SaveAs("%s/fTest_%s_%s_%s_chi2_vs_nGauss.pdf"%(_outdir,_cat,_proc,_extension))
 
 # Function to extract the sigma effective of a histogram
@@ -368,7 +368,8 @@ def makeSplusBPlot(workspace,hD,hSB,hB,hS,hDr,hBr,hSr,cat,options,dB=None,reduce
   lat0.DrawLatex(0.12,0.92,"#bf{CMS} #it{Preliminary}")
   #lat0.DrawLatex(0.12,0.92,"#bf{CMS}")
   #lat0.DrawLatex(0.6,0.92,"137 fb^{-1} (13 TeV)")
-  lat0.DrawLatex(0.6,0.92,"34.7 fb^{-1} (13.6 TeV)")
+  # lat0.DrawLatex(0.6,0.92,"34.7 fb^{-1} (13.6 TeV)")
+  lat0.DrawLatex(0.6,0.92,"61.9 fb^{-1} (13.6 TeV)")
   lat0.DrawLatex(0.6,0.8,"#scale[0.6]{%s}"%Translate(cat,translateCats))
   #lat0.DrawLatex(0.15,0.83,"#scale[0.75]{H#rightarrow#gamma#gamma}")
   lat0.DrawLatex(0.15,0.83,"#scale[0.75]{H #rightarrow #gamma#gamma, m_{H} = 125.38 GeV}")
@@ -456,7 +457,7 @@ def makeSplusBPlot(workspace,hD,hSB,hB,hS,hDr,hBr,hSr,cat,options,dB=None,reduce
 
   # Save canvas
   canv.Update()
-  canv.SaveAs("./SplusBModels%s/%s_%s_%s.png"%(options.ext,options.ext,cat,options.xvar.split(",")[0]))
+  # canv.SaveAs("./SplusBModels%s/%s_%s_%s.png"%(options.ext,options.ext,cat,options.xvar.split(",")[0]))
   canv.SaveAs("./SplusBModels%s/%s_%s_%s.pdf"%(options.ext,options.ext,cat,options.xvar.split(",")[0]))
   #raw_input("Press any key to continue...")
 
@@ -554,7 +555,7 @@ def plotPdfComponents(ssf,_outdir='./',_extension='',_proc='',_cat=''):
   drawCMS(onTop=True, CMSString="Simulation Private Work", sqrts=None)
 
   canv.Update()
-  canv.SaveAs("%s/%sshape_pdf_components_%s_%s.png"%(_outdir,_extension,_proc,_cat))
+  # canv.SaveAs("%s/%sshape_pdf_components_%s_%s.png"%(_outdir,_extension,_proc,_cat))
   canv.SaveAs("%s/%sshape_pdf_components_%s_%s.pdf"%(_outdir,_extension,_proc,_cat))
 
 # Plot final pdf for each mass point
@@ -623,7 +624,7 @@ def plotInterpolation(_finalModel,_outdir='./',_massPoints='120,121,122,123,124,
   drawCMS(onTop=True, CMSString="Simulation Private Work", sqrts=None)
 
   canv.Update()
-  canv.SaveAs("%s/%s_model_vs_mH.png"%(_outdir,_finalModel.name))
+  # canv.SaveAs("%s/%s_model_vs_mH.png"%(_outdir,_finalModel.name))
   canv.SaveAs("%s/%s_model_vs_mH.pdf"%(_outdir,_finalModel.name))
 
 
@@ -705,7 +706,7 @@ def plotSplines(_finalModel,_outdir="./",_nominalMass='125',splinesToPlot=['xs',
   # Decorate with CMS label
   drawCMS(onTop=True, CMSString="Simulation Private Work", sqrts=None)
   canv.Update()
-  canv.SaveAs("%s/%s_splines.png"%(_outdir,_finalModel.name))
+  # canv.SaveAs("%s/%s_splines.png"%(_outdir,_finalModel.name))
   canv.SaveAs("%s/%s_splines.pdf"%(_outdir,_finalModel.name))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -880,4 +881,4 @@ def plotSignalModel(_hists,_opt,_outdir=".",offset=0.02):
 
   # Save canvas
   canv.SaveAs("%s/smodel_%s%s%s.pdf"%(_outdir,catExt,procExt,yearExt))
-  canv.SaveAs("%s/smodel_%s%s%s.png"%(_outdir,catExt,procExt,yearExt))
+  # canv.SaveAs("%s/smodel_%s%s%s.png"%(_outdir,catExt,procExt,yearExt))
