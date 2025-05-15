@@ -28,11 +28,20 @@ def writeProcesses(f,d,options):
       for ir,r in d[d['cat']==cat].iterrows():
         if (not (str(year) in r["year"])) and (not (r["year"] == "merged")): continue
         # Write to datacard
+        # if r['proc'] == "bkg_mass":
+        #   index = r['model'].rfind("_13TeV_bkgshape")
+        #   if index != -1:
+        #     model = r['model'][:index] + "_" + year + "_13TeV_bkgshape"
+        #     f.write("shapes      %-55s %-40s %s %s\n"%(r['proc'],r['cat'],r['modelWSFile'],model))
+#####
         if r['proc'] == "bkg_mass":
+          # strip out the era (_year_) tag for background → use only CMS_hgg_<cat>_13TeV_bkgshape
           index = r['model'].rfind("_13TeV_bkgshape")
           if index != -1:
-            model = r['model'][:index] + "_" + year + "_13TeV_bkgshape"
-            f.write("shapes      %-55s %-40s %s %s\n"%(r['proc'],r['cat'],r['modelWSFile'],model))
+            model = r['model'][:index] + "_13TeV_bkgshape"
+            f.write("shapes      %-55s %-40s %s %s\n"
+                    % (r['proc'], r['cat'], r['modelWSFile'], model))
+#####
         else: 
           f.write("shapes      %-55s %-40s %s %s\n"%(r['proc'],r['cat'],r['modelWSFile'],r['model']))
 
@@ -252,14 +261,32 @@ def writeMCStatUncertainty(f,d,options):
   return True
 
 
-def writePdfIndex(f,d,options):
-  f.write("\n")
-  years = list(set([re.search(r'\d{4}', item).group() for item in options.years.split(",") if re.search(r'\d{4}', item)]))
-  for cat in d[~d['cat'].str.contains("NOTAG")].cat.unique(): 
-    for year in years:
-      indexStr = "pdfindex_%s_%s_13TeV"%(cat, year)
-      f.write("%-55s  discrete\n"%indexStr)
-  return True
+# def writePdfIndex(f,d,options):
+#   f.write("\n")
+#   years = list(set([re.search(r'\d{4}', item).group() for item in options.years.split(",") if re.search(r'\d{4}', item)]))
+#   for cat in d[~d['cat'].str.contains("NOTAG")].cat.unique(): 
+#     for year in years:
+#       indexStr = "pdfindex_%s_%s_13TeV"%(cat, year)
+#       f.write("%-55s  discrete\n"%indexStr)
+#   return True
+
+def writePdfIndex(f, d, options):
+    """
+    For each non-data category, write exactly one
+    'pdfindex_<cat>_13TeV  discrete' line,
+    dropping any _YEAR tag from the category name.
+    """
+    f.write("\n")
+    # pick out the set of categories that actually appear (ignore your merged data_obs)
+    cats = [c for c in d['cat'].unique() if 'NOTAG' not in c]
+    for cat in cats:
+        # strip any _<year> suffix if present
+        base_cat = re.sub(r'_\d{4}(post|pre)?(EE|BPix)?$', '', cat)
+        indexStr = f"pdfindex_{base_cat}_13TeV"
+        f.write(f"{indexStr:55s}  discrete\n")
+    return True
+
+
 
 def writeBreak(f):
   lbreak = '----------------------------------------------------------------------------------------------------------------------------------'
