@@ -7,7 +7,9 @@ from collections import OrderedDict as od
 from commonObjects import *
 
 # Functions for manip RooDataSets
-def reduceDataset(_d,_argset): return _d.reduce(_argset)
+def reduceDataset(_d,_argset):
+  print(_d, _argset)
+  return _d.reduce(_argset)
 
 def splitRVWV(_d,_argset,mode="RV"):
   # Split into RV/WV senario at dZ = 1cm

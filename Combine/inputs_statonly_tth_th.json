@@ -1,0 +1,8 @@
+{
+    "mu":{
+    "pois":"r_tHq,r_ttH",
+    "fits":"profile2D:statonly_fixedMH:all",
+    "points":"2000:50",
+    "fit_opts":"--freezeParameters MH --setParameterRanges r_tHq=-50.0,50.0,r_ttH=-5.0,5.0 --saveSpecifiedNuis all"
+    }
+}

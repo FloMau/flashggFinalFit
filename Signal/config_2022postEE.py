@@ -20,6 +20,6 @@ signalScriptCfg = {
   'smears':'', # separate nuisance per year
 
   # Job submission options
-  'batch':'local', # ['condor_lxplus','condor','SGE','IC','local']
+  'batch':'condor', # ['condor_lxplus','condor','SGE','IC','local']
   'queue':'microcentury' # use hep.q for IC
 }
