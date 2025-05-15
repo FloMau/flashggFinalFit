@@ -166,14 +166,14 @@ globalXSBRMap['tth_th_analysis']['GG2H'] = {'mode':'constant','factor':51.96}
 globalXSBRMap['tth_th_analysis']['VBF'] = {'mode':'constant','factor':4.067}
 globalXSBRMap['tth_th_analysis']['VH'] = {'mode':'constant','factor':2.3781}
 globalXSBRMap['tth_th_analysis']['TTH'] = {'mode':'constant','factor':0.5638}
-globalXSBRMap['tth_th_analysis']['tHqLep'] = {'mode':'constant','factor': 83.26 * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHad'] = {'mode':'constant','factor': 83.26 * (1-0.3258)}
+globalXSBRMap['tth_th_analysis']['tHqLep'] = {'mode':'constant','factor': 0.08326 * 0.3258}
+globalXSBRMap['tth_th_analysis']['tHqHad'] = {'mode':'constant','factor': 0.08326 * (1-0.3258)}
 globalXSBRMap['tth_th_analysis']['ggh_incl'] = {'mode':'constant','factor':51.96}
 globalXSBRMap['tth_th_analysis']['vbf_incl'] = {'mode':'constant','factor':4.067}
 globalXSBRMap['tth_th_analysis']['vh_incl'] = {'mode':'constant','factor':2.3781}
 globalXSBRMap['tth_th_analysis']['tth_incl'] = {'mode':'constant','factor':0.5638}
-globalXSBRMap['tth_th_analysis']['tHqLep_incl'] = {'mode':'constant','factor': 83.26 * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHad_incl'] = {'mode':'constant','factor': 83.26 * (1-0.3258)}
+globalXSBRMap['tth_th_analysis']['tHqLep_incl'] = {'mode':'constant','factor': 0.08326 * 0.3258}
+globalXSBRMap['tth_th_analysis']['tHqHad_incl'] = {'mode':'constant','factor': 0.08326 * (1-0.3258)}
 
 
 # Early Run 3 Hgg analysis WITH in/out splitting TBD
