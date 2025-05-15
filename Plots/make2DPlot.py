@@ -123,7 +123,7 @@ h2D.GetZaxis().SetTitle("q(%s,%s)"%(Translate(x,translatePOIs),Translate(y,trans
 h2D.GetZaxis().SetTitleSize(0.05)
 h2D.GetZaxis().SetTitleOffset(0.8)
 #h2D.SetMaximum(10)
-h2D.SetMaximum(25)
+h2D.SetMaximum(9)
 # Make CI contours
 c68, c95 = h2D.Clone(), h2D.Clone()
 c68.SetContour(2)
