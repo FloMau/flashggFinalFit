@@ -1,12 +1,103 @@
 models = {
-  "mu":"-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
---PO \"map=.*/tHqLep_incl.*:r_tHq[1,-100,100]\" \
---PO \"map=.*/tHqHad_incl.*:r_tHq[1,-100,100]\" \
---PO \"map=.*/tth_incl.*:r_ttH[1,-10,10]\"",
+"r_2D":
+"""-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+    --PO "map=.*/tHqLep_incl.*:r_tHq[1,-25,25]" \
+    --PO "map=.*/tHqHad_incl.*:r_tHq[1,-25,25]" \
+    --PO "map=.*/tth_incl.*:r_ttH[1,-1,3]" \
+    --PO "map=.*/ggh_incl.*:1" \
+    --PO "map=.*/vbf_incl.*:1" \
+    --PO "map=.*/vh_incl.*:1"
+""",
 
-# --PO \"map=.*/vh_incl.*:r[1,0,2]\" \
-# --PO \"map=.*/ggh_incl.*:r[1,0,2]\" \
-# --PO \"map=.*/vbf_incl.*:r[1,0,2]\" \
+"r_tHq_1D":
+  """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+     --PO "map=.*/tHqLep_incl.*:r_tHq[1,-25,25]" \
+     --PO "map=.*/tHqHad_incl.*:r_tHq[1,-25,25]" \
+     --PO "map=.*/tth_incl.*:1" \
+     --PO "map=.*/ggh_incl.*:1" \
+     --PO "map=.*/vbf_incl.*:1" \
+     --PO "map=.*/vh_incl.*:1"
+     """,
+
+"r_tHq_1D_ttH_profiled":
+"""-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+    --PO "map=.*/tHqLep_incl.*:r_tHq[1,-25,25]" \
+    --PO "map=.*/tHqHad_incl.*:r_tHq[1,-25,25]" \
+    --PO "map=.*/tth_incl.*:r_ttH[1,-1,3]" \
+    --PO "map=.*/ggh_incl.*:1" \
+    --PO "map=.*/vbf_incl.*:1" \
+    --PO "map=.*/vh_incl.*:1"
+    """,
+
+"r_ttH_1D":
+  """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+     --PO "map=.*/tHqLep_incl.*:1" \
+     --PO "map=.*/tHqHad_incl.*:1" \
+     --PO "map=.*/tth_incl.*:r_ttH[1,-1,3]" \
+     --PO "map=.*/ggh_incl.*:1" \
+     --PO "map=.*/vbf_incl.*:1" \
+     --PO "map=.*/vh_incl.*:1"
+     """,
+
+"r_ttH_1D_tHq_profiled":
+"""-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+    --PO "map=.*/tHqLep_incl.*:r_tHq[1,-25,25]" \
+    --PO "map=.*/tHqHad_incl.*:r_tHq[1,-25,25]" \
+    --PO "map=.*/tth_incl.*:r_ttH[1,-1,3]" \
+    --PO "map=.*/ggh_incl.*:1" \
+    --PO "map=.*/vbf_incl.*:1" \
+    --PO "map=.*/vh_incl.*:1"
+    """,
+
+# only one POI for significance? warning: ModelConfig 'ModelConfig' defines more than one parameter of interest. This is not supported in some statistical methods.
+  "Z_ttH": 
+  """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+      --PO "map=.*/tHqLep_incl.*:1" \
+      --PO "map=.*/tHqHad_incl.*:1" \
+      --PO \"map=.*/vbf_incl.*:1" \
+      --PO \"map=.*/vh_incl.*:1" \
+      --PO \"map=.*/ggh_incl.*:1" \
+      --PO "map=.*/tth_incl.*:r_ttH[1,0,5]"
+      """,
+
+  "Z_tHq":
+    """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+       --PO "map=.*/tHqLep_incl.*:r_tHq[1,0,25]" \
+       --PO "map=.*/tHqHad_incl.*:r_tHq[1,0,25]" \
+       --PO "map=.*/tth_incl.*:1" \
+       --PO "map=.*/ggh_incl.*:1" \
+       --PO "map=.*/vbf_incl.*:1" \
+       --PO "map=.*/vh_incl.*:1"
+       """,
+
+  "limit_tHq":
+    """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+       --PO "map=.*/tHqLep_incl.*:r_tHq[1,0,25]" \
+       --PO "map=.*/tHqHad_incl.*:r_tHq[1,0,25]" \
+       --PO "map=.*/tth_incl.*:1" \
+       --PO "map=.*/ggh_incl.*:1" \
+       --PO "map=.*/vbf_incl.*:1" \
+       --PO "map=.*/vh_incl.*:1"
+       """,
+
+  "limit_tHq_HybridNew":
+    """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+       --PO "map=.*/tHqLep_incl.*:r_tHq[1,0,25]" \
+       --PO "map=.*/tHqHad_incl.*:r_tHq[1,0,25]" \
+       --PO "map=.*/tth_incl.*:1" \
+       --PO "map=.*/ggh_incl.*:1" \
+       --PO "map=.*/vbf_incl.*:1" \
+       --PO "map=.*/vh_incl.*:1"
+       """,
+
+
+
+
+
+
+
+
+
 
   "mu_inclusive_wsyst":"",
 

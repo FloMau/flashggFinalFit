@@ -78,6 +78,102 @@ def writeProcesses(f,d,options):
   f.write("\n")
   return True
 
+def writeProcesses(f, d, options):
+    import re
+    f.write("\n")
+    # If opt.prune then remove all rows from dataFrame with prune=1
+    if options.prune:
+        d = d[d['prune'] == 0]
+
+    # Remember which categories we've already written data_obs and bkg_mass for
+    written_dataobs = set()
+    written_bkg     = set()
+
+    # Shapes
+    years = list(set([
+        re.search(r'\d{4}', item).group()
+        for item in options.years.split(",")
+        if re.search(r'\d{4}', item)
+    ]))
+
+    for cat in d.cat.unique():
+        for year in years:
+            for _, r in d[d['cat'] == cat].iterrows():
+                # only write rows matching this year (or 'merged')
+                if (str(year) not in r["year"]) and (r["year"] != "merged"):
+                    continue
+
+                proc = r['proc']
+
+                # data_obs: write exactly once per category
+                if proc == "data_obs":
+                    if cat in written_dataobs:
+                        continue
+                    written_dataobs.add(cat)
+                    f.write(
+                        "shapes      %-55s %-40s %s %s\n"
+                        % (proc, cat, r['modelWSFile'], r['model'])
+                    )
+                    continue
+
+                # bkg_mass: write exactly once per category, stripping the era tag
+                if proc == "bkg_mass":
+                    if cat in written_bkg:
+                        continue
+                    written_bkg.add(cat)
+                    idx = r['model'].rfind("_13TeV_bkgshape")
+                    if idx != -1:
+                        model = r['model'][:idx] + "_13TeV_bkgshape"
+                    else:
+                        model = r['model']
+                    f.write(
+                        "shapes      %-55s %-40s %s %s\n"
+                        % (proc, cat, r['modelWSFile'], model)
+                    )
+                    continue
+
+                # all other processes
+                f.write(
+                    "shapes      %-55s %-40s %s %s\n"
+                    % (proc, cat, r['modelWSFile'], r['model'])
+                )
+
+    # Now the bin / observation / rate table
+    lbreak        = "-" * 130
+    lbin_cat      = "%-30s" % "bin"
+    lobs_cat      = "%-30s" % "observation"
+    lbin_procXcat = "%-30s" % "bin"
+    lproc         = "%-30s" % "process"
+    lprocid       = "%-30s" % "process"
+    lrate         = "%-30s" % "rate"
+
+    for cat in d.cat.unique():
+        lbin_cat += "%-55s " % cat
+        lobs_cat += "%-55s " % "-1"
+        sigID = 0
+        for _, r in d[d['cat'] == cat].iterrows():
+            if r['proc'] == "data_obs":
+                continue
+            lbin_procXcat += "%-55s " % cat
+            lproc         += "%-55s " % r['proc']
+            if r['proc'] == "bkg_mass":
+                lprocid += "%-55s " % "1"
+            else:
+                lprocid += "%-55s " % sigID
+                sigID   -= 1
+            if r['rate'] == 1.0:
+                lrate += "%-55.1f " % r['rate']
+            else:
+                lrate += "%-55.7f " % r['rate']
+
+    f.write("\n")
+    for line in [lbreak, lbin_cat, lobs_cat, lbreak,
+                 lbin_procXcat, lproc, lprocid, lrate, lbreak]:
+        f.write(line.rstrip() + "\n")
+
+    f.write("\n")
+    return True
+
 
 def writeSystematic(f,d,s,options,stxsMergeScheme=None,scaleCorrScheme=None):
 

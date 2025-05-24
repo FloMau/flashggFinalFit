@@ -179,7 +179,10 @@ if opt.prune:
 
     # Extract per category yields
     catYields = od()
-    for cat in data.cat.unique(): catYields[cat] = data[(data['cat']==cat)&(data['type']=='sig')].nominal_yield.sum()
+    for cat in data.cat.unique():
+      # print("CAT:", cat)
+      # print(data[(data['cat']==cat)&(data['type']=='sig')])
+      catYields[cat] = data[(data['cat']==cat)&(data['type']=='sig')].nominal_yield.sum()
     
     # Set prune = 1 if < threshold of total cat yield
     # mask = (data['nominal_yield']<opt.pruneThreshold*data.apply(lambda x: catYields[x['cat']], axis=1))&(data['type']=='sig')&(~data['cat'].str.contains('NOTAG'))
