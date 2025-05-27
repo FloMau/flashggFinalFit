@@ -70,8 +70,20 @@ for f_pkl_name in pkl_files:
     df = pickle.load(f_pkl)
     data = pd.concat([data,df], ignore_index=True, axis=0, sort=False)
 
+    # Ensure we always have a numEvents column (fallback to nominal_yield if nothing else)
+    if 'numEvents' not in data.columns:
+        data['numEvents'] = data['nominal_yield']
+    # ---------------------------
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Systematics: use factory function to calculate yield variations
+
+# Make sure every row has a total event count,
+# so that writeSystematic() never KeyErrors on 'numEvents'
+if 'numEvents' not in data.columns:
+    data['numEvents'] = data['nominal_yield']
+
 if opt.doSystematics:
   from datacardTools.calcSystematics import factoryType, addConstantSyst, experimentalSystFactory, theorySystFactory, groupSystematics, envelopeSystematics, renameSyst
 
