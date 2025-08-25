@@ -6,6 +6,7 @@ python3 RunYields.py \
     --procs auto \
     --ext tth_th_analysis \
     --batch local \
-    --mergeYears # --queue longlunch # (--doSystematics)
+    --mergeYears  \
+    --doSystematics \
 
-python3 makeDatacard.py --years 2022preEE,2022postEE,2023preBPix,2023posBPixE --ext tth_th_analysis --prune --pruneThreshold 0.0001 --skipCOWCorr # --doSystematics # --doMCStatUncertainty 
+python3 makeDatacard.py --years 2022preEE,2022postEE,2023preBPix,2023posBPixE --ext tth_th_analysis --prune --pruneThreshold 0.01 --doTrueYield --analysis tth_th_analysis --skipCOWCorr --doSystematics # --doMCStatUncertainty 

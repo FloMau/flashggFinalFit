@@ -53,6 +53,8 @@ def get_options():
 # Extract years and inputWSDir
 inputWSDirMap = od()
 for i in opt.inputWSDirMap.split(","): 
+  print("I:", i)
+  print("SPLIT:", i.split("="))
   print(" --> Taking %s input workspaces from: %s"%(i.split("=")[0],i.split("=")[1])) 
   if not os.path.isdir( i.split("=")[1] ):
     print(" --> [ERROR] Directory %s does not exist. Leaving..."%i.split("=")[1])
@@ -232,7 +234,8 @@ for ir,r in data[data['type']=='sig'].iterrows():
       # List all RooDataSet names in this workspace
       inputWS.Print("v")   # dump variables, datasets, etc.
       sys.exit(1)
-
+      # I have to find out what to do if a process has zero events in a given category. Ignore here.
+      # continue
   # Calculate nominal yield, sumw2 and add COW correction for in acceptance events
   contents = ""
   y, y_COWCorr = 0, 0
@@ -260,6 +263,8 @@ for ir,r in data[data['type']=='sig'].iterrows():
     if "NOTAG" not in r['cat']:
       # Skip centralObjectWeight correction as concerns events in acceptance
       experimentalSystYields = calcSystYields(r['nominalDataName'],contents,inputWS,experimentalFactoryType,skipCOWCorr=True,proc=r['proc'],year=r['year'],systWeightScheme=opt.systWeightScheme,ignoreWarnings=opt.ignore_warnings)
+      print(" experimentalFactoryType.items()",  experimentalFactoryType.items())
+      print("experimentalSystYields:", experimentalSystYields)
       for s,f in experimentalFactoryType.items():
         data.at[ir, 'numEvents'] = experimentalSystYields["numEvents"]
         if f in ['a_w','a_h']: 

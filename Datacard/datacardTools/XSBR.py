@@ -142,6 +142,37 @@ XSBRMap['STXS']['THQ'] = {'mode':'tHq','factor':0.9721}
 XSBRMap['STXS']['THW_FWDH'] = {'mode':'tHW','factor':0.0106}
 XSBRMap['STXS']['THW'] = {'mode':'tHW','factor':0.9894}
 
+
+# ttH / tH Run3 CP analysis
+XSBRMap['tth_th_analysis'] = od()
+XSBRMap['tth_th_analysis']['decay'] = {'mode':'hgg'}
+XSBRMap['tth_th_analysis']['GG2H'] = {'mode':'constant','factor':51.96}
+XSBRMap['tth_th_analysis']['VBF'] = {'mode':'constant','factor':4.067}
+XSBRMap['tth_th_analysis']['VH'] = {'mode':'constant','factor':2.3781}
+XSBRMap['tth_th_analysis']['TTH'] = {'mode':'constant','factor':0.5638}
+XSBRMap['tth_th_analysis']['tHqLep'] = {'mode':'constant','factor': 0.08326 * 0.3258}
+XSBRMap['tth_th_analysis']['tHqHad'] = {'mode':'constant','factor': 0.08326 * (1-0.3258)}
+XSBRMap['tth_th_analysis']['ggh_incl'] = {'mode':'constant','factor':51.96}
+XSBRMap['tth_th_analysis']['vbf_incl'] = {'mode':'constant','factor':4.067}
+XSBRMap['tth_th_analysis']['vh_incl'] = {'mode':'constant','factor':2.3781}
+XSBRMap['tth_th_analysis']['tth_incl'] = {'mode':'constant','factor':0.5638}
+XSBRMap['tth_th_analysis']['tHqLep_incl'] = {'mode':'constant','factor': 0.08326 * 0.3258}
+XSBRMap['tth_th_analysis']['tHqHad_incl'] = {'mode':'constant','factor': 0.08326 * (1-0.3258)}
+
+
+# Early Run 3 Hgg analysis WITH in/out splitting TBD
+XSBRMap['tth_th_analysisInOut'] = od()
+XSBRMap['tth_th_analysisInOut']['decay'] = {'mode':'hgg'}
+# Also adding the lower-case strings (Nico convention)
+XSBRMap['tth_th_analysisInOut']['ggh_in'] = {'mode':'constant','factor':51.96}
+XSBRMap['tth_th_analysisInOut']['vbf_in'] = {'mode':'constant','factor':4.067}
+XSBRMap['tth_th_analysisInOut']['vh_in'] = {'mode':'constant','factor':2.3781}
+XSBRMap['tth_th_analysisInOut']['tth_in'] = {'mode':'constant','factor':0.5638}
+XSBRMap['tth_th_analysisInOut']['ggh_out'] = {'mode':'constant','factor':51.96}
+XSBRMap['tth_th_analysisInOut']['vbf_out'] = {'mode':'constant','factor':4.067}
+XSBRMap['tth_th_analysisInOut']['vh_out'] = {'mode':'constant','factor':2.3781}
+XSBRMap['tth_th_analysisInOut']['tth_out'] = {'mode':'constant','factor':0.5638}
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Functions for loading XS*BR below
 # Importing modules from combine
