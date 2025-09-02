@@ -159,24 +159,28 @@ globalXSBRMap['STXS']['THW'] = {'mode':'tHW','factor':0.9894}
 ###################################################################################################################################################################################################
 
 # ttH / tH Run3 CP analysis
-
+# 125.38 GeV values
 globalXSBRMap['tth_th_analysis'] = od()
 globalXSBRMap['tth_th_analysis']['decay'] = {'mode':'hgg'}
 globalXSBRMap['tth_th_analysis']['GG2H'] = {'mode':'constant','factor':51.96}
 globalXSBRMap['tth_th_analysis']['VBF'] = {'mode':'constant','factor':4.067}
 globalXSBRMap['tth_th_analysis']['VH'] = {'mode':'constant','factor':2.3781}
 globalXSBRMap['tth_th_analysis']['TTH'] = {'mode':'constant','factor':0.5638}
-globalXSBRMap['tth_th_analysis']['tHqLep'] = {'mode':'constant','factor': 0.08326 * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHad'] = {'mode':'constant','factor': 0.08326 * (1-0.3258)}
+globalXSBRMap['tth_th_analysis']['tHqLep'] = {'mode':'constant','factor': 0.0832 * 0.3258}
+globalXSBRMap['tth_th_analysis']['tHqHad'] = {'mode':'constant','factor': 0.0832 * (1-0.3258)}
+globalXSBRMap['tth_th_analysis']['tHW'] = {'mode':'constant','factor':0.0172}
+globalXSBRMap['tth_th_analysis']['bbh'] = {'mode':'constant','factor':0.5213}
 globalXSBRMap['tth_th_analysis']['ggh_incl'] = {'mode':'constant','factor':51.96}
 globalXSBRMap['tth_th_analysis']['vbf_incl'] = {'mode':'constant','factor':4.067}
 globalXSBRMap['tth_th_analysis']['vh_incl'] = {'mode':'constant','factor':2.3781}
 globalXSBRMap['tth_th_analysis']['tth_incl'] = {'mode':'constant','factor':0.5638}
-globalXSBRMap['tth_th_analysis']['tHqLep_incl'] = {'mode':'constant','factor': 0.08326 * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHad_incl'] = {'mode':'constant','factor': 0.08326 * (1-0.3258)}
+globalXSBRMap['tth_th_analysis']['tHqLep_incl'] = {'mode':'constant','factor': 0.0832 * 0.3258}
+globalXSBRMap['tth_th_analysis']['tHqHad_incl'] = {'mode':'constant','factor': 0.0832 * (1-0.3258)}
+globalXSBRMap['tth_th_analysis']['tHW_incl'] = {'mode':'constant','factor':0.0172}
+globalXSBRMap['tth_th_analysis']['bbh_incl'] = {'mode':'constant','factor':0.5213}
 
 
-# Early Run 3 Hgg analysis WITH in/out splitting TBD
+# THE STUFF BELOW NEEDS TO BE ADAPTED TO OUR FIDUCIAL XS LATER ON!!!
 globalXSBRMap['tth_th_analysisInOut'] = od()
 globalXSBRMap['tth_th_analysisInOut']['decay'] = {'mode':'hgg'}
 # Also adding the lower-case strings (Nico convention)

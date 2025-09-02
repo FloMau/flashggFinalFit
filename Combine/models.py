@@ -4,7 +4,9 @@ models = {
     --PO "map=.*/tHqLep_incl.*:r_tHq[1,-25,25]" \
     --PO "map=.*/tHqHad_incl.*:r_tHq[1,-25,25]" \
     --PO "map=.*/tth_incl.*:r_ttH[1,-1,3]" \
+    --PO "map=.*/tHW_incl.*:r_ttH[1,-1,3]" \
     --PO "map=.*/ggh_incl.*:1" \
+    --PO "map=.*/bbH_incl.*:1" \
     --PO "map=.*/vbf_incl.*:1" \
     --PO "map=.*/vh_incl.*:1"
 """,
@@ -14,7 +16,9 @@ models = {
      --PO "map=.*/tHqLep_incl.*:r_tHq[1,-25,25]" \
      --PO "map=.*/tHqHad_incl.*:r_tHq[1,-25,25]" \
      --PO "map=.*/tth_incl.*:1" \
+     --PO "map=.*/tHW_incl.*:1" \
      --PO "map=.*/ggh_incl.*:1" \
+     --PO "map=.*/bbH_incl.*:1" \
      --PO "map=.*/vbf_incl.*:1" \
      --PO "map=.*/vh_incl.*:1"
      """,
@@ -24,7 +28,34 @@ models = {
     --PO "map=.*/tHqLep_incl.*:r_tHq[1,-25,25]" \
     --PO "map=.*/tHqHad_incl.*:r_tHq[1,-25,25]" \
     --PO "map=.*/tth_incl.*:r_ttH[1,-1,3]" \
+    --PO "map=.*/tHW_incl.*:r_ttH[1,-1,3]" \
     --PO "map=.*/ggh_incl.*:1" \
+    --PO "map=.*/bbH_incl.*:1" \
+    --PO "map=.*/vbf_incl.*:1" \
+    --PO "map=.*/vh_incl.*:1"
+    """,
+
+# the following two are for comparison with previous measurements, where tHW was part of tH
+"r_tHq_plus_tHW_1D":
+  """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+     --PO "map=.*/tHqLep_incl.*:r_tH[1,-25,25]" \
+     --PO "map=.*/tHqHad_incl.*:r_tH[1,-25,25]" \
+     --PO "map=.*/tth_incl.*:1" \
+     --PO "map=.*/tHW_incl.*:r_tH[1,-25,25]" \
+     --PO "map=.*/ggh_incl.*:1" \
+     --PO "map=.*/bbH_incl.*:1" \
+     --PO "map=.*/vbf_incl.*:1" \
+     --PO "map=.*/vh_incl.*:1"
+     """,
+
+"r_tHq_plus_tHW_1D_ttH_profiled":
+"""-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+    --PO "map=.*/tHqLep_incl.*:r_tH[1,-25,25]" \
+    --PO "map=.*/tHqHad_incl.*:r_tH[1,-25,25]" \
+    --PO "map=.*/tth_incl.*:r_ttH[1,-1,3]" \
+    --PO "map=.*/tHW_incl.*:r_tH[1,-1,3]" \
+    --PO "map=.*/ggh_incl.*:1" \
+    --PO "map=.*/bbH_incl.*:1" \
     --PO "map=.*/vbf_incl.*:1" \
     --PO "map=.*/vh_incl.*:1"
     """,
@@ -34,7 +65,9 @@ models = {
      --PO "map=.*/tHqLep_incl.*:1" \
      --PO "map=.*/tHqHad_incl.*:1" \
      --PO "map=.*/tth_incl.*:r_ttH[1,-1,3]" \
+     --PO "map=.*/tHW_incl.*:r_ttH[1,-1,3]" \
      --PO "map=.*/ggh_incl.*:1" \
+     --PO "map=.*/bbH_incl.*:1" \
      --PO "map=.*/vbf_incl.*:1" \
      --PO "map=.*/vh_incl.*:1"
      """,
@@ -44,7 +77,9 @@ models = {
     --PO "map=.*/tHqLep_incl.*:r_tHq[1,-25,25]" \
     --PO "map=.*/tHqHad_incl.*:r_tHq[1,-25,25]" \
     --PO "map=.*/tth_incl.*:r_ttH[1,-1,3]" \
+    --PO "map=.*/tHW_incl.*:r_ttH[1,-1,3]" \
     --PO "map=.*/ggh_incl.*:1" \
+    --PO "map=.*/bbH_incl.*:1" \
     --PO "map=.*/vbf_incl.*:1" \
     --PO "map=.*/vh_incl.*:1"
     """,
@@ -57,7 +92,9 @@ models = {
       --PO \"map=.*/vbf_incl.*:1" \
       --PO \"map=.*/vh_incl.*:1" \
       --PO \"map=.*/ggh_incl.*:1" \
+      --PO "map=.*/bbH_incl.*:1" \
       --PO "map=.*/tth_incl.*:r_ttH[1,0,5]"
+      --PO "map=.*/tHW_incl.*:r_ttH[1,0,5]" \
       """,
 
   "Z_tHq":
@@ -66,6 +103,20 @@ models = {
        --PO "map=.*/tHqHad_incl.*:r_tHq[1,0,25]" \
        --PO "map=.*/tth_incl.*:1" \
        --PO "map=.*/ggh_incl.*:1" \
+       --PO "map=.*/bbH_incl.*:1" \
+       --PO "map=.*/tHW_incl.*:1" \
+       --PO "map=.*/vbf_incl.*:1" \
+       --PO "map=.*/vh_incl.*:1"
+       """,
+
+  "Z_tHq_plus_tHW":
+    """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+       --PO "map=.*/tHqLep_incl.*:r_tH[1,0,25]" \
+       --PO "map=.*/tHqHad_incl.*:r_tH[1,0,25]" \
+       --PO "map=.*/tth_incl.*:1" \
+       --PO "map=.*/ggh_incl.*:1" \
+       --PO "map=.*/bbH_incl.*:1" \
+       --PO "map=.*/tHW_incl.*:r_tH[1,0,25]" \
        --PO "map=.*/vbf_incl.*:1" \
        --PO "map=.*/vh_incl.*:1"
        """,
@@ -75,17 +126,34 @@ models = {
        --PO "map=.*/tHqLep_incl.*:r_tHq[1,0,25]" \
        --PO "map=.*/tHqHad_incl.*:r_tHq[1,0,25]" \
        --PO "map=.*/tth_incl.*:1" \
+       --PO "map=.*/tHW_incl.*:1" \
        --PO "map=.*/ggh_incl.*:1" \
+       --PO "map=.*/bbH_incl.*:1" \
        --PO "map=.*/vbf_incl.*:1" \
        --PO "map=.*/vh_incl.*:1"
        """,
 
+  "limit_tHq_plus_tHW":
+    """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+       --PO "map=.*/tHqLep_incl.*:r_tH[1,0,25]" \
+       --PO "map=.*/tHqHad_incl.*:r_tH[1,0,25]" \
+       --PO "map=.*/tth_incl.*:1" \
+       --PO "map=.*/tHW_incl.*:r_tH[1,0,25]" \
+       --PO "map=.*/ggh_incl.*:1" \
+       --PO "map=.*/bbH_incl.*:1" \
+       --PO "map=.*/vbf_incl.*:1" \
+       --PO "map=.*/vh_incl.*:1"
+       """,
+
+
+# used this just for tests
   "limit_tHq_HybridNew":
     """-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
        --PO "map=.*/tHqLep_incl.*:r_tHq[1,0,25]" \
        --PO "map=.*/tHqHad_incl.*:r_tHq[1,0,25]" \
        --PO "map=.*/tth_incl.*:1" \
        --PO "map=.*/ggh_incl.*:1" \
+       --PO "map=.*/bbH_incl.*:1" \
        --PO "map=.*/vbf_incl.*:1" \
        --PO "map=.*/vh_incl.*:1"
        """,

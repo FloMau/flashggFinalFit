@@ -46,5 +46,17 @@
       "fits":     "HybridNew:statonly_fixedMH:all",
       "points":   "1",
       "fit_opts": "--setParameterRanges r_tHq=0,25 --setParameters MH=125.38 --freezeParameters MH --testStat=ProfileLikelihood --saveHybridResult --singlePoint 1"
-    }
+    },
+  "r_tHq_plus_tHW_1D": {
+    "pois": "r_tH",
+    "fits": "profile1D:statonly_fixedMH:all",
+    "points": "1000:50",
+    "fit_opts": "--freezeParameters MH,r_ttH, --setParameterRanges r_tH=-25.0,25.0 --saveSpecifiedNuis all"
+  },
+  "r_tHq_plus_tHW_1D_ttH_profiled": {
+    "pois": "r_tH",
+    "fits": "profile1D:statonly_fixedMH:all",
+    "points": "1000:50",
+    "fit_opts": "--freezeParameters MH, --setParameterRanges r_tH=-25.0,25.0,r_ttH=-0.5,2.5 --saveSpecifiedNuis all"
+  }
 }

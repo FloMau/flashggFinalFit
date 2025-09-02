@@ -61,14 +61,14 @@ source ../setup.sh
 ### 1D scan in r_ttH
 #####################################
 
-# ttH fixed
+# tHq fixed
 # python3 RunText2Workspace.py --mode r_ttH_1D --batch local
 
 # # rm -rv runFits_r_ttH_1D
 # python3 RunFits.py --inputJson inputs_statonly_tth_th.json --mode r_ttH_1D
 # python3 CollectFits.py --inputJson inputs_statonly_tth_th.json --mode r_ttH_1D
 
-# # ttH profiled
+# tHq profiled
 # python3 RunText2Workspace.py --mode r_ttH_1D_tHq_profiled --batch local
 
 # # rm -rv runFits_r_ttH_1D_tHq_profiled
@@ -84,7 +84,7 @@ source ../setup.sh
 
 # combine -M Significance ./Datacard_Z_ttH.root --rMin 0 --rMax 5 -t -1 --setParameters r_ttH=1,MH=125.38 --freezeParameters MH
 
-#####################################
+####################################
 ### Significance and limit for tHq
 ####################################
 
@@ -92,4 +92,31 @@ source ../setup.sh
 
 # combine -M Significance ./Datacard_Z_tHq.root --rMin 0 --rMax 25 -t -1 --setParameters r_tHq=1,MH=125.38 --freezeParameters MH
 
-# combine -M AsymptoticLimits Datacard_Z_tHq.root --run expected --rMin 0 --rMax 25 -t -1 --setParameters MH=125.38 --freezeParameters MH -v 3
+# combine -M AsymptoticLimits Datacard_Z_tHq.root --run expected --rMin 0 --rMax 25 -t -1 --setParameters MH=125.38 --freezeParameters MH # -v 3
+
+##########################################################
+### for comparison with analyses where tHW is part of tH
+##########################################################
+
+# ttH fixed
+# python3 RunText2Workspace.py --mode r_tHq_plus_tHW_1D --batch local
+
+# # rm -rv runFits_r_tHq_1D
+# python3 RunFits.py --inputJson inputs_statonly_tth_th.json --mode r_tHq_plus_tHW_1D 
+# python3 CollectFits.py --inputJson inputs_statonly_tth_th.json --mode r_tHq_plus_tHW_1D 
+
+# # ttH profiled
+# python3 RunText2Workspace.py --mode r_tHq_plus_tHW_1D_ttH_profiled --batch local
+
+# # rm -rv runFits_r_tHq_1D_ttH_profiled
+# python3 RunFits.py --inputJson inputs_statonly_tth_th.json --mode r_tHq_plus_tHW_1D_ttH_profiled
+# python3 CollectFits.py --inputJson inputs_statonly_tth_th.json --mode r_tHq_plus_tHW_1D_ttH_profiled
+
+
+# python3 RunText2Workspace.py --mode Z_tHq_plus_tHW --batch local
+
+# combine -M Significance ./Datacard_Z_tHq_plus_tHW.root --rMin 0 --rMax 25 -t -1 --setParameters r_tH=1,MH=125.38 --freezeParameters MH
+
+# combine -M AsymptoticLimits Datacard_Z_tHq_plus_tHW.root --run expected --rMin 0 --rMax 25 -t -1 --setParameters MH=125.38 --freezeParameters MH # -v 3
+
+## no pruning at all? at least > 0 should be good 
