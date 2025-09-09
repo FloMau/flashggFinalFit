@@ -15,6 +15,9 @@ def get_options():
   parser.add_option("--POIs", dest="POIs", default="r", help="Parameters of interest in fit")
   parser.add_option("--batch", dest="batch", default="condor", help="Batch system [IC,condor]")
   parser.add_option("--queue", dest="queue", default="espresso", help="Change condor queue")
+  parser.add_option("--mass", dest="mass", default=None, type='float', help="Override Higgs mass (MH) used by combine and freeze it during toy fit/throw")
+  parser.add_option('--freezePdfIndices', dest='freezePdfIndices', default=False, action='store_true', help='Freeze discrete pdf index parameters during toy fit/throw')
+  parser.add_option('--pdfIndexRegex', dest='pdfIndexRegex', default='pdfindex', help='Regex/substring to select pdf index parameters (default: pdfindex)')
   parser.add_option('--dryRun',dest='dryRun', default=False, action="store_true", help='Dry run')
   return parser.parse_args()
 (opt,args) = get_options()
@@ -42,6 +45,35 @@ for p,v in poi_bf.items():
 setParamStr = setParamStr[:-1]
 setParam0Str = setParam0Str[:-1]
 mh_bf = w.var("MH").getVal()
+if opt.mass is not None:
+  mh_bf = float(opt.mass)
+
+# Append MH to the existing --setParameters strings (keeps single flag instance)
+setParamStr += ",MH=%.3f" % mh_bf
+setParam0Str += ",MH=%.3f" % mh_bf
+
+# Collect optional pdf index names to freeze (by regex) if requested
+extra_freeze = ""
+if opt.freezePdfIndices:
+  import re as _re
+  names = []
+  # Look through categories (discrete) and variables
+  cats = w.allCats(); it = cats.fwdIterator(); obj = it.next()
+  while obj:
+    name = obj.GetName()
+    if _re.search(opt.pdfIndexRegex, name, _re.IGNORECASE):
+      names.append(name)
+    obj = it.next()
+  vars_ = w.allVars(); it2 = vars_.fwdIterator(); obj2 = it2.next()
+  while obj2:
+    name = obj2.GetName()
+    if _re.search(opt.pdfIndexRegex, name, _re.IGNORECASE) and name not in names:
+      names.append(name)
+    obj2 = it2.next()
+  if len(names) > 0:
+    extra_freeze = "," + ",".join(names)
+  else:
+    print("[warn] --freezePdfIndices requested, but no indices matched '%s'" % opt.pdfIndexRegex)
 
 if opt.batch == 'IC':
   # Create submission file
@@ -60,12 +92,12 @@ if opt.batch == 'IC':
     fsub.write("#Fit command\n")
     fsub.write("mv higgsCombine_%g_gen_step*.root gen_%g.root\n"%(itoy,itoy))
     #fit_cmd = "combine gen_%g.root -m %.3f -M MultiDimFit --floatOtherPOIs=1 --saveWorkspace --toysFrequentist --bypassFrequentistFit -t 1 --setParameters %s=%.3f -s -1 -n _%g_fit_step --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2"%(itoy,mh_bf,opt.POI,poi_bf,itoy)
-    fit_cmd = "combine gen_%g.root -m %.3f -M MultiDimFit -P %s --floatOtherPOIs=1 --saveWorkspace --toysFrequentist --bypassFrequentistFit -t 1 %s -s -1 -n _%g_fit_step --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2"%(itoy,mh_bf,opt.POIs.split(",")[0],setParamStr,itoy)
+    fit_cmd = "combine gen_%g.root -m %.3f -M MultiDimFit -P %s --floatOtherPOIs=1 --saveWorkspace --toysFrequentist --bypassFrequentistFit -t 1 %s --freezeParameters MH%s -s -1 -n _%g_fit_step --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2"%(itoy,mh_bf,opt.POIs.split(",")[0],setParamStr,extra_freeze,itoy)
     fsub.write("%s\n\n"%fit_cmd)
     # Throw cmd
     fsub.write("#Throw command\n")
     fsub.write("mv higgsCombine_%g_fit_step*.root fit_%g.root\n"%(itoy,itoy))
-    throw_cmd = "combine fit_%g.root -m %.3f --snapshotName MultiDimFit -M GenerateOnly --saveToys --toysFrequentist --bypassFrequentistFit -t -1 -n _%g_throw_step %s"%(itoy,mh_bf,itoy,setParam0Str)
+    throw_cmd = "combine fit_%g.root -m %.3f --snapshotName MultiDimFit -M GenerateOnly --saveToys --toysFrequentist --bypassFrequentistFit -t -1 -n _%g_throw_step %s --freezeParameters MH%s"%(itoy,mh_bf,itoy,setParam0Str,extra_freeze)
     fsub.write("%s\n\n"%throw_cmd)
     # Clean up
     fsub.write("mv higgsCombine_%g_throw_step*.root toy_%g.root\n"%(itoy,itoy))
@@ -101,12 +133,12 @@ elif opt.batch == 'condor':
   # Fit cmd
   fsub.write("#Fit command\n")
   fsub.write("mv higgsCombine_${itoy}_gen_step*.root gen_${itoy}.root\n")
-  fit_cmd = "combine gen_${itoy}.root -m %.3f -M MultiDimFit -P %s --floatOtherPOIs=1 --saveWorkspace --toysFrequentist --bypassFrequentistFit -t 1 %s -s -1 -n _${itoy}_fit_step --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2"%(mh_bf,opt.POIs.split(",")[0],setParamStr)
+  fit_cmd = "combine gen_${itoy}.root -m %.3f -M MultiDimFit -P %s --floatOtherPOIs=1 --saveWorkspace --toysFrequentist --bypassFrequentistFit -t 1 %s --freezeParameters MH%s -s -1 -n _${itoy}_fit_step --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2"%(mh_bf,opt.POIs.split(",")[0],setParamStr,extra_freeze)
   fsub.write("%s\n\n"%fit_cmd)
   # Throw cmd
   fsub.write("#Throw command\n")
   fsub.write("mv higgsCombine_${itoy}_fit_step*.root fit_${itoy}.root\n")
-  throw_cmd = "combine fit_${itoy}.root -m %.3f --snapshotName MultiDimFit -M GenerateOnly --saveToys --toysFrequentist --bypassFrequentistFit -t -1 -n _${itoy}_throw_step %s"%(mh_bf,setParam0Str)
+  throw_cmd = "combine fit_${itoy}.root -m %.3f --snapshotName MultiDimFit -M GenerateOnly --saveToys --toysFrequentist --bypassFrequentistFit -t -1 -n _${itoy}_throw_step %s --freezeParameters MH%s"%(mh_bf,setParam0Str,extra_freeze)
   fsub.write("%s\n\n"%throw_cmd)
   # Clean up
   fsub.write("mv higgsCombine_${itoy}_throw_step*.root toy_${itoy}.root\n")
