@@ -78,7 +78,7 @@ def extractBandProperties(data,category,bidx):
   props['down2sigma'] = np.percentile(data['%s_%g'%(c,bidx)].values,50*(1+math.erf(-2./math.sqrt(2))))
   return props
 
-def makeSplusBPlot(workspace,hD,hSB,hB,hS,hDr,hBr,hSr,cat,options,dB=None,reduceRange=None):
+def makeSplusBPlot(workspace,hD,hSB,hB,hS,hDr,hBr,hSr,cat,options,dB=None,reduceRange=None,splitS=None,splitSr=None):
   translateCats = {} if options.translateCats is None else LoadTranslations(options.translateCats)
   translatePOIs = {} if options.translatePOIs is None else LoadTranslations(options.translatePOIs)
   blindingRegion = [float(options.blindingRegion.split(",")[0]),float(options.blindingRegion.split(",")[1])]
@@ -182,12 +182,39 @@ def makeSplusBPlot(workspace,hD,hSB,hB,hS,hDr,hBr,hSr,cat,options,dB=None,reduce
     hB['pdfNBins'].SetLineStyle(2)
     hB['pdfNBins'].Draw("Hist same c")
   else:
-    hS['pdfNBins'].SetLineWidth(3)
-    hS['pdfNBins'].SetLineColor(9)
-    hS['pdfNBins'].SetFillColor(38)
-    hS['pdfNBins'].SetFillStyle(1001)
-    hS['pdfNBins'].GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
-    hS['pdfNBins'].Draw("Hist same cf")
+    # Draw split components if provided: order = resonant (dashed line), then tHq (fill), then top (fill)
+    if splitS is not None and len(splitS) >= 2:
+      # Resonant dashed line if provided as 3rd component
+      if len(splitS) >= 3 and splitS[2] is not None:
+        hRes = splitS[2]['pdfNBins']
+        hRes.SetLineWidth(3)
+        hRes.SetLineColor(ROOT.kMagenta+1)
+        hRes.SetLineStyle(2)
+        hRes.GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
+        hRes.Draw("Hist same c")
+      # tHq (second element) as filled
+      hTHq = splitS[1]['pdfNBins']
+      hTHq.SetLineWidth(2)
+      hTHq.SetLineColor(ROOT.kGreen+3)
+      hTHq.SetFillColor(ROOT.kGreen-7)
+      hTHq.SetFillStyle(1001)
+      hTHq.GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
+      hTHq.Draw("Hist same cf")
+      # Top (first element) as filled on top
+      hTop = splitS[0]['pdfNBins']
+      hTop.SetLineWidth(2)
+      hTop.SetLineColor(ROOT.kBlue+2)
+      hTop.SetFillColor(ROOT.kAzure-9)
+      hTop.SetFillStyle(1001)
+      hTop.GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
+      hTop.Draw("Hist same cf")
+    else:
+      hS['pdfNBins'].SetLineWidth(3)
+      hS['pdfNBins'].SetLineColor(9)
+      hS['pdfNBins'].SetFillColor(38)
+      hS['pdfNBins'].SetFillStyle(1001)
+      hS['pdfNBins'].GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
+      hS['pdfNBins'].Draw("Hist same cf")
     hB['pdfNBins'].SetLineWidth(3)
     hB['pdfNBins'].SetLineColor(2)
     hB['pdfNBins'].Draw("Hist same c")
@@ -221,7 +248,17 @@ def makeSplusBPlot(workspace,hD,hSB,hB,hS,hDr,hBr,hSr,cat,options,dB=None,reduce
     leg.AddEntry(hB['pdfNBins'],"B component","l")
   else:
     leg.AddEntry(hB['pdfNBins'],"B fit","l")
-    leg.AddEntry(hS['pdfNBins'],"S model","fl")
+    if splitS is not None and len(splitS) >= 2:
+      labels = options.splitLabels.split(",")
+      lab_top  = labels[0] if len(labels) > 0 else "ttH+tHW"
+      lab_thq  = labels[1] if len(labels) > 1 else "tHq"
+      lab_res  = labels[2] if len(labels) > 2 else "Resonant"
+      leg.AddEntry(splitS[0]['pdfNBins'], lab_top, "fl")
+      leg.AddEntry(splitS[1]['pdfNBins'], lab_thq, "fl")
+      if len(splitS) >= 3 and splitS[2] is not None:
+        leg.AddEntry(splitS[2]['pdfNBins'], lab_res, "l")
+    else:
+      leg.AddEntry(hS['pdfNBins'],"S model","fl")
   if options.doBands:
     leg.AddEntry(gr_1sig,"#pm1 #sigma","F")
     leg.AddEntry(gr_2sig,"#pm2 #sigma","F")
@@ -294,12 +331,38 @@ def makeSplusBPlot(workspace,hD,hSB,hB,hS,hDr,hBr,hSr,cat,options,dB=None,reduce
     hBr.SetLineColor(2)
     hBr.Draw("Hist same c")
   else:
-    hSr.SetLineWidth(3)
-    hSr.SetLineColor(9)
-    hSr.SetFillColor(38)
-    hSr.SetFillStyle(1001)
-    hSr.GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
-    hSr.Draw("Hist same cf")
+    if splitSr is not None and len(splitSr) >= 2:
+      # Resonant dashed line if provided as 3rd component
+      if len(splitSr) >= 3 and splitSr[2] is not None:
+        rRes = splitSr[2]
+        rRes.SetLineWidth(3)
+        rRes.SetLineColor(ROOT.kMagenta+1)
+        rRes.SetLineStyle(2)
+        rRes.GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
+        rRes.Draw("Hist same c")
+      # tHq as filled
+      rTHq = splitSr[1]
+      rTHq.SetLineWidth(2)
+      rTHq.SetLineColor(ROOT.kGreen+3)
+      rTHq.SetFillColor(ROOT.kGreen-7)
+      rTHq.SetFillStyle(1001)
+      rTHq.GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
+      rTHq.Draw("Hist same cf")
+      # Top as filled
+      rTop = splitSr[0]
+      rTop.SetLineWidth(2)
+      rTop.SetLineColor(ROOT.kBlue+2)
+      rTop.SetFillColor(ROOT.kAzure-9)
+      rTop.SetFillStyle(1001)
+      rTop.GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
+      rTop.Draw("Hist same cf")
+    else:
+      hSr.SetLineWidth(3)
+      hSr.SetLineColor(9)
+      hSr.SetFillColor(38)
+      hSr.SetFillStyle(1001)
+      hSr.GetXaxis().SetRangeUser(blindingRegion[0],blindingRegion[1])
+      hSr.Draw("Hist same cf")
     hBr.SetLineWidth(3)
     hBr.SetLineColor(2)
     hBr.Draw("Hist same c")

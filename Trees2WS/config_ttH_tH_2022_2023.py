@@ -5,7 +5,7 @@ trees2wsCfg = {
   'inputTreeDir':'DiphotonTree',
 
   # Variables to be added to dataframe: use wildcard * for common strings
-  'mainVars':["CMS_hgg_mass", "weight", "weight_central", "dZ", "*Up","*Down"],
+  'mainVars':["CMS_hgg_mass", "weight", "weight_central", "dZ", "*Up","*Down", "fiducialGeometricFlag", "GenNBJet"],
   'dataVars':["CMS_hgg_mass","weight"], # Vars to be added for data
   'stxsVar':'',
   'diffVar':'',

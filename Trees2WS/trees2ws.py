@@ -309,11 +309,14 @@ if not opt.doSTXSSplitting:
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # 2) Convert pandas dataframe to RooWorkspace
 
-if opt.doInOutSplitting: fiducialIds = data['fiducialGeometricFlag'].unique()
-else: fiducialIds = [0] # If we do not perform in/out splitting, we want to have one inclusive (for particle-level) process definition, our code int for that is zero
+if opt.doInOutSplitting:
+  # Use the boolean identifiers True/False to represent in/out groups
+  fiducialIds = [True, False]
+else:
+  fiducialIds = [0] # If we do not perform in/out splitting, we want to have one inclusive (for particle-level) process definition, our code int for that is zero
 
 for fiducialId in fiducialIds:
-  
+
   if opt.doDiffSplitting: continue
 
   # In the end, the STXS and fiducial in/out splitting should maybe be harmonised, this looks a bit ugly
@@ -327,9 +330,16 @@ for fiducialId in fiducialIds:
     fidTag = "incl"
 
   if opt.doInOutSplitting:
-    fiducial_mask = data['fiducialGeometricFlag'] == fiducialId
-    if opt.doSystematics:
-      fiducial_mask_syst = sdata['fiducialGeometricFlag'] == fiducialId
+    # Define "in" as fiducialGeometricFlag == True AND GenNBJet > 0
+    if fiducialId == True:
+      fiducial_mask = (data['fiducialGeometricFlag'] == True) & (data['GenNBJet'] > 0)
+      if opt.doSystematics:
+        fiducial_mask_syst = (sdata['fiducialGeometricFlag'] == True) & (sdata['GenNBJet'] > 0)
+    else:
+      # "out" is the complement of the above condition
+      fiducial_mask = ~((data['fiducialGeometricFlag'] == True) & (data['GenNBJet'] > 0))
+      if opt.doSystematics:
+        fiducial_mask_syst = ~((sdata['fiducialGeometricFlag'] == True) & (sdata['GenNBJet'] > 0))
   else:
     fiducial_mask = data['CMS_hgg_mass'] > 0 # Basically a true mask because we are all inclusive
     if opt.doSystematics:

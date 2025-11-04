@@ -1,83 +1,151 @@
 import os
 import subprocess
-from multiprocessing import Pool
-import glob
-import errno
-import time
+import shutil
+import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict
 
-# Define an array of input masses
-input_masses = [120, 125, 130]
 
-# Define an array of eras
-eras = ["preEE", "postEE"]
+# Map each mode to its input subdir and filename template
+# The filename may depend on the era only through the directory name.
+MODE_INPUTS: Dict[str, str] = {
+    # signal modes
+    "tth": "ttH_{era}/output_TTHToGG_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqLep": "tHqLep_{era}/output_THQtoGG_lep_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqHad": "tHqHad_{era}/output_THQtoGG_had_M125_13TeV_amcatnlo_pythia8.root",
+    "tHW": "tHW_{era}/output_THWtoGG_M125_13TeV_madgraph_pythia8.root",
+    # resonant backgrounds
+    "vh": "VH_{era}/output_VHToGG_M125_13TeV_amcatnlo_pythia8.root",
+    "ggh": "GluGluH_{era}/output_GluGluHToGG_M125_13TeV_amcatnloFXFX_pythia8.root",
+    "vbf": "VBFH_{era}/output_VBFHToGG_M125_13TeV_amcatnlo_pythia8.root",
+    "bbh": "bbH_{era}/output_BBHToGG_M125_13TeV_powheg_pythia8.root",
+}
 
-# Define an array of production modes and corresponding process strings
-production_modes = [
-    ("ggh", "GluGluHtoGG"),
-    ("vbf", "VBFHtoGG"),
-    ("vh", "VHtoGG"),
-    ("tth", "ttHtoGG")
-]
 
-# Function to safely create a directory
-def safe_mkdir(path):
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+def build_input_path(root_base: str, era: str, mode: str) -> str:
+    if mode not in MODE_INPUTS:
+        raise ValueError(f"Unknown mode '{mode}'. Supported: {sorted(MODE_INPUTS.keys())}")
+    rel = MODE_INPUTS[mode].format(era=era)
+    return os.path.join(root_base, rel)
 
-# Function to run the command
-def run_process(args):
-    mass, era, mode, process, path_to_root_files = args
-    output_dir = "../input_output_2022{}".format(era)
-    safe_mkdir(output_dir)  # Create output directory if it doesn't exist
-    
-    # Construct the command as a single string
-    cmd = "python3 trees2ws.py --inputMass {mass} --productionMode {mode} --year 2022{era} --doSystematics --doInOutSplitting --inputConfig config_2022.py --inputTreeFile '{path_to_root_files}/{process}_M-{mass}_{era}/'*.root --outputWSDir {output_dir}".format(
-        mass=mass, mode=mode, era=era, path_to_root_files=path_to_root_files, process=process, output_dir=output_dir)
-    
-    try:
-        process = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        if process.returncode != 0:
-            print("Error running process for mass {}, era {}, and mode {}:".format(mass, era, mode))
-            print(stderr)
-        else:
-            print("Process for mass {}, era {}, and mode {} completed successfully.".format(mass, era, mode))
-    except Exception as e:
-        print("Exception running process for mass {}, era {}, and mode {}:".format(mass, era, mode))
-        print(str(e))
 
-# Main function to parallelize tasks
-def main(path_to_root_files):
-    
-    num_workers = 24 # masses x 2 eras x 4 production modes = 24
-    pool = Pool(processes=num_workers)
-    tasks = [
-        (mass, era, mode, process, path_to_root_files)
-        for mode, process in production_modes
-        for era in eras
-        for mass in input_masses
+def run_trees2ws(input_config: str, input_tree_file: str, mass: int, mode: str, era: str, wsdir: str, do_systematics: bool):
+    cmd = [
+        "python3", "trees2ws.py",
+        "--inputConfig", input_config,
+        "--inputTreeFile", input_tree_file,
+        "--inputMass", str(mass),
+        "--productionMode", mode,
+        "--year", era,
+        "--outputWSDir", wsdir,
+        "--doInOutSplitting",
     ]
-    
-    # Lets benchmark the time:
-    start_time = time.time()  
+    if do_systematics:
+        cmd.append("--doSystematics")
+    print("Running:", " ".join(cmd))
+    subprocess.check_call(cmd)
 
-    pool.map(run_process, tasks)
 
-    end_time = time.time()  
+def run_one_task(input_config: str, root_base: str, mass: int, mode: str, era: str, wsdir: str, do_systematics: bool) -> str:
+    input_tree_file = build_input_path(root_base, era, mode)
+    if not os.path.isfile(input_tree_file):
+        msg = f"[WARN] Input file missing for mode {mode}, era {era}: {input_tree_file}"
+        print(msg)
+        return msg
+    run_trees2ws(
+        input_config=input_config,
+        input_tree_file=input_tree_file,
+        mass=mass,
+        mode=mode,
+        era=era,
+        wsdir=wsdir,
+        do_systematics=do_systematics,
+    )
+    return f"[OK] {mode} {era}"
 
-    # Calculate and print the duration
-    duration = end_time - start_time
-    print("Process {:.2f} seconds.".format(duration))
+
+def main():
+    parser = argparse.ArgumentParser(description="Run trees2ws.py over eras/modes like the bash script.")
+    parser.add_argument("--base-ws-dir", required=True, help="Base workspace output dir (will contain per-era subdirs)")
+    parser.add_argument("--root-base", default="/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation/outputForFinalFits_03Sept2025/root", help="Base directory containing per-mode ROOT files")
+    parser.add_argument("--input-config", default="config_ttH_tH_2022_2023.py", help="trees2ws input config path")
+    parser.add_argument("--eras", default="2022preEE,2022postEE,2023preBPix,2023postBPix", help="Comma-separated eras to process")
+    parser.add_argument("--modes", default="tth", help="Comma-separated production modes to run. See MODE_INPUTS keys for options.")
+    parser.add_argument("--mass", type=int, default=125, help="H mass to pass to trees2ws")
+    parser.add_argument("--clean", action="store_true", help="Wipe base-ws-dir before running")
+    parser.add_argument("--do-systematics", action="store_true", help="Pass --doSystematics to trees2ws.py")
+    parser.add_argument("--max-procs", type=int, default=1, help="Max concurrent trees2ws jobs (>=2 enables parallel)")
+
+    args = parser.parse_args()
+
+    eras = [e.strip() for e in args.eras.split(",") if e.strip()]
+    modes = [m.strip() for m in args.modes.split(",") if m.strip()]
+
+    # Mirror the bash: wipe and recreate base dir
+    if args.clean and os.path.isdir(args.base_ws_dir):
+        print(f"Removing existing base dir: {args.base_ws_dir}")
+        shutil.rmtree(args.base_ws_dir)
+    os.makedirs(args.base_ws_dir, exist_ok=True)
+
+    # Prepare era directories
+    era_wsdirs = {}
+    for era in eras:
+        print(f">>>>> Making workspaces for era: {era}")
+        wsdir = os.path.join(args.base_ws_dir, era)
+        os.makedirs(wsdir, exist_ok=True)
+        era_wsdirs[era] = wsdir
+
+    # Build all tasks
+    tasks = [(mode, era) for era in eras for mode in modes]
+
+    if args.max_procs > 1:
+        print(f"Running up to {args.max_procs} jobs in parallel...")
+        with ThreadPoolExecutor(max_workers=args.max_procs) as ex:
+            futures = {
+                ex.submit(
+                    run_one_task,
+                    args.input_config,
+                    args.root_base,
+                    args.mass,
+                    mode,
+                    era,
+                    era_wsdirs[era],
+                    args.do_systematics,
+                ): (mode, era)
+                for (mode, era) in tasks
+            }
+            for fut in as_completed(futures):
+                mode, era = futures[fut]
+                try:
+                    res = fut.result()
+                    print(res)
+                except subprocess.CalledProcessError as cpe:
+                    print(f"[FAIL] {mode} {era}: returncode={cpe.returncode}")
+                except Exception as e:
+                    print(f"[FAIL] {mode} {era}: {e}")
+    else:
+        # Run sequentially
+        for era in eras:
+            wsdir = era_wsdirs[era]
+            for mode in modes:
+                try:
+                    msg = run_one_task(
+                        input_config=args.input_config,
+                        root_base=args.root_base,
+                        mass=args.mass,
+                        mode=mode,
+                        era=era,
+                        wsdir=wsdir,
+                        do_systematics=args.do_systematics,
+                    )
+                    print(msg)
+                except subprocess.CalledProcessError as cpe:
+                    print(f"[FAIL] {mode} {era}: returncode={cpe.returncode}")
+                except Exception as e:
+                    print(f"[FAIL] {mode} {era}: {e}")
+
+    print(">>> All done!")
+
 
 if __name__ == "__main__":
-    import sys
-    
-    if len(sys.argv) != 2:
-        print("Usage: <script.py> <path_to_root_files>")
-        sys.exit(1)
-    
-    path_to_root_files = sys.argv[1]
-    main(path_to_root_files)
+    main()

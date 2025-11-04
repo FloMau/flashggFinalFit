@@ -54,6 +54,13 @@ def get_options():
   parser.add_option("--problematicCats", dest="problematicCats", default='', help='Problematic analysis categories to skip when processing all')
   parser.add_option("--doHHMjjFix", dest="doHHMjjFix", default=False, action="store_true", help="Do fix for HH analysis where some cats have different Mjj var")
   parser.add_option("--POI", dest="POI", default='', help="POI to be considered.")
+  # Splitting/visualisation options
+  parser.add_option("--splitResonant", dest="splitResonant", default=False, action="store_true", help="Split signal into considered (ttH+tHq groups) and resonant Higgs background (ggH,VBF,VH,bbH)")
+  parser.add_option("--topPOIs", dest="topPOIs", default="r_ttH", help="Comma-separated POIs controlling ttH+tHW group")
+  parser.add_option("--thqPOIs", dest="thqPOIs", default="r_tHq", help="Comma-separated POIs controlling tHq group")
+  parser.add_option("--topScale", dest="topScale", default=2.0, type='float', help="Visual scale factor for ttH+tHW component")
+  parser.add_option("--thqScale", dest="thqScale", default=5.0, type='float', help="Visual scale factor for tHq component")
+  parser.add_option("--splitLabels", dest="splitLabels", default="ttH+tHW x2,tHq x5,Resonant (ggH+VBF+VH+bbH)", help="Legend labels for split components: top,thq,resonant")
   return parser.parse_args()
 (opt,args) = get_options()
 
@@ -343,6 +350,82 @@ for cidx in range(len(cats)):
   h_spdf = {'pdfNBins':h_sbpdf['pdfNBins']-h_bpdf['pdfNBins'],
             'nBins':h_sbpdf['nBins']-h_bpdf['nBins']
            }
+
+  # Optional: build split components (ttH+tHW, tHq) and resonant Higgs (ggH,VBF,VH,bbH)
+  split_components = None  # will become (h_top, h_thq, h_res)
+  if opt.splitResonant:
+    # Helper to save/restore POIs
+    def _save_vals(pnames):
+      saved = {}
+      for pn in pnames:
+        v = w.var(pn)
+        if v: saved[pn] = v.getVal()
+        else: print("    * [WARNING] POI %s not found in workspace; split may be incomplete" % pn)
+      return saved
+    def _set_vals(vals, value=None):
+      for pn, val in vals.items():
+        if value is None: w.var(pn).setVal(val)
+        else: w.var(pn).setVal(value)
+
+    top_pois = [p for p in opt.topPOIs.split(",") if p]
+    thq_pois = [p for p in opt.thqPOIs.split(",") if p]
+
+    saved_top = _save_vals(top_pois)
+    saved_thq = _save_vals(thq_pois)
+
+    if (len(saved_top) == len(top_pois)) and (len(saved_thq) == len(thq_pois)):
+      # 1) Resonant component: turn off both top and thq
+      _set_vals(saved_top, 0.0)
+      _set_vals(saved_thq, 0.0)
+      h_sbpdf_res = {
+        'pdfNBins': sbpdf.createHistogram("h_sb_res_pdfNBins_%s" % c, _xvar, ROOT.RooFit.Binning(opt.pdfNBins, xvar.getMin(), xvar.getMax())),
+        'nBins': sbpdf.createHistogram("h_sb_res_nBins_%s" % c, _xvar, ROOT.RooFit.Binning(opt.nBins, xvar.getMin(), xvar.getMax()))
+      }
+      # Apply same Bkg renormalization scaling as baseline, if requested
+      if opt.doBkgRenormalization:
+        for h in h_sbpdf_res.values(): h.Scale(normFactor_SB)
+      h_spdf_res = {
+        'pdfNBins': h_sbpdf_res['pdfNBins'] - h_bpdf['pdfNBins'],
+        'nBins': h_sbpdf_res['nBins'] - h_bpdf['nBins']
+      }
+
+      # 2) Top (ttH+tHW): turn off thq only
+      _set_vals(saved_top)  # restore top
+      _set_vals(saved_thq, 0.0)  # keep thq off
+      h_sbpdf_top_tot = {
+        'pdfNBins': sbpdf.createHistogram("h_sb_top_pdfNBins_%s" % c, _xvar, ROOT.RooFit.Binning(opt.pdfNBins, xvar.getMin(), xvar.getMax())),
+        'nBins': sbpdf.createHistogram("h_sb_top_nBins_%s" % c, _xvar, ROOT.RooFit.Binning(opt.nBins, xvar.getMin(), xvar.getMax()))
+      }
+      if opt.doBkgRenormalization:
+        for h in h_sbpdf_top_tot.values(): h.Scale(normFactor_SB)
+      h_spdf_top_tot = {
+        'pdfNBins': h_sbpdf_top_tot['pdfNBins'] - h_bpdf['pdfNBins'],
+        'nBins': h_sbpdf_top_tot['nBins'] - h_bpdf['nBins']
+      }
+      # remove resonant part
+      h_spdf_top = {
+        'pdfNBins': h_spdf_top_tot['pdfNBins'].Clone(),
+        'nBins': h_spdf_top_tot['nBins'].Clone()
+      }
+      h_spdf_top['pdfNBins'].Add(h_spdf_res['pdfNBins'], -1.0)
+      h_spdf_top['nBins'].Add(h_spdf_res['nBins'], -1.0)
+
+      # 3) tHq: difference
+      h_spdf_thq = {
+        'pdfNBins': h_spdf['pdfNBins'].Clone(),
+        'nBins': h_spdf['nBins'].Clone()
+      }
+      # S_thq = S_total - S_res - S_top
+      h_spdf_thq['pdfNBins'].Add(h_spdf_res['pdfNBins'], -1.0)
+      h_spdf_thq['pdfNBins'].Add(h_spdf_top['pdfNBins'], -1.0)
+      h_spdf_thq['nBins'].Add(h_spdf_res['nBins'], -1.0)
+      h_spdf_thq['nBins'].Add(h_spdf_top['nBins'], -1.0)
+
+      # Restore all POIs
+      _set_vals(saved_top)
+      _set_vals(saved_thq)
+
+      split_components = (h_spdf_top, h_spdf_thq, h_spdf_res)
   
   # Scale pdf histograms to match binning used
   xvar_range = int(xvar.getBinning().highBound()-xvar.getBinning().lowBound())
@@ -350,6 +433,15 @@ for cidx in range(len(cats)):
     print("    * scaling pdf histograms to match binning of data")
     for h_ipdf in [h_sbpdf,h_bpdf,h_spdf]:
       for h in h_ipdf.values(): h.Scale(float(xvar_range)/opt.nBins)
+    if split_components is not None:
+      for comp in split_components:
+        for h in comp.values(): h.Scale(float(xvar_range)/opt.nBins)
+
+  # Apply visual scaling to considered components if requested
+  if split_components is not None:
+    # split_components = (top, thq, resonant)
+    for h in split_components[0].values(): h.Scale(opt.topScale)
+    for h in split_components[1].values(): h.Scale(opt.thqScale)
 
   # Create weighted pdf histograms
   if opt.doCatWeights:
@@ -359,6 +451,13 @@ for cidx in range(len(cats)):
     h_wspdf = {'pdfNBins':h_spdf['pdfNBins'].Clone(),'nBins':h_spdf['nBins'].Clone()}
     for h_ipdf in [h_wsbpdf,h_wbpdf,h_wspdf]:
       for h in h_ipdf.values(): h.Scale(catsWeights[c])
+    if split_components is not None:
+      h_wspdf_top = {'pdfNBins': split_components[0]['pdfNBins'].Clone(), 'nBins': split_components[0]['nBins'].Clone()}
+      h_wspdf_thq = {'pdfNBins': split_components[1]['pdfNBins'].Clone(), 'nBins': split_components[1]['nBins'].Clone()}
+      h_wspdf_res = {'pdfNBins': split_components[2]['pdfNBins'].Clone(), 'nBins': split_components[2]['nBins'].Clone()}
+      for h in h_wspdf_top.values(): h.Scale(catsWeights[c])
+      for h in h_wspdf_thq.values(): h.Scale(catsWeights[c])
+      for h in h_wspdf_res.values(): h.Scale(catsWeights[c])
   
   # Create ratio histograms (+weighted)
   print("    * creating ratio histograms")
@@ -386,6 +485,16 @@ for cidx in range(len(cats)):
       h_wdata_ratio.SetBinContent(ibin,wbval-wbkgval)
       h_wdata_ratio.SetBinError(ibin,wberr)
 
+  # Ratio histograms for split components
+  if split_components is not None:
+    h_spdf_ratio_top = split_components[0]['pdfNBins'].Clone()
+    h_spdf_ratio_thq = split_components[1]['pdfNBins'].Clone()
+    h_spdf_ratio_res = split_components[2]['pdfNBins'].Clone()
+    if opt.doCatWeights:
+      h_wspdf_ratio_top = h_wspdf_top['pdfNBins'].Clone()
+      h_wspdf_ratio_thq = h_wspdf_thq['pdfNBins'].Clone()
+      h_wspdf_ratio_res = h_wspdf_res['pdfNBins'].Clone()
+
   # Sum histograms if processing multiple categories
   if( len(opt.cats.split(",")) > 1 )|( opt.cats == 'all' ):
     if opt.doSumCategories:
@@ -398,6 +507,13 @@ for cidx in range(len(cats)):
         h_bpdf_ratio_sum = h_bpdf_ratio.Clone()
         h_spdf_sum = {'pdfNBins':h_spdf['pdfNBins'].Clone(),'nBins':h_spdf['nBins'].Clone()}
         h_spdf_ratio_sum = h_spdf_ratio.Clone()
+        if split_components is not None:
+          h_spdf_top_sum = {'pdfNBins': split_components[0]['pdfNBins'].Clone(),'nBins': split_components[0]['nBins'].Clone()}
+          h_spdf_thq_sum = {'pdfNBins': split_components[1]['pdfNBins'].Clone(),'nBins': split_components[1]['nBins'].Clone()}
+          h_spdf_res_sum  = {'pdfNBins': split_components[2]['pdfNBins'].Clone(),'nBins': split_components[2]['nBins'].Clone()}
+          h_spdf_ratio_top_sum = h_spdf_ratio_top.Clone()
+          h_spdf_ratio_thq_sum = h_spdf_ratio_thq.Clone()
+          h_spdf_ratio_res_sum = h_spdf_ratio_res.Clone()
         if opt.doCatWeights:
           h_wdata_sum = h_wdata.Clone()
           h_wdata_ratio_sum = h_wdata_ratio.Clone()
@@ -406,6 +522,13 @@ for cidx in range(len(cats)):
           h_wbpdf_ratio_sum = h_wbpdf_ratio.Clone()
           h_wspdf_sum = {'pdfNBins':h_wspdf['pdfNBins'].Clone(),'nBins':h_wspdf['nBins'].Clone()}
           h_wspdf_ratio_sum = h_wspdf_ratio.Clone()
+          if split_components is not None:
+            h_wspdf_top_sum = {'pdfNBins': h_wspdf_top['pdfNBins'].Clone(),'nBins': h_wspdf_top['nBins'].Clone()}
+            h_wspdf_thq_sum = {'pdfNBins': h_wspdf_thq['pdfNBins'].Clone(),'nBins': h_wspdf_thq['nBins'].Clone()}
+            h_wspdf_res_sum  = {'pdfNBins': h_wspdf_res['pdfNBins'].Clone(),'nBins': h_wspdf_res['nBins'].Clone()}
+            h_wspdf_ratio_top_sum = h_wspdf_ratio_top.Clone()
+            h_wspdf_ratio_thq_sum = h_wspdf_ratio_thq.Clone()
+            h_wspdf_ratio_res_sum = h_wspdf_ratio_res.Clone()
       else:
         h_data_sum += h_data.Clone()
         h_data_ratio_sum += h_data_ratio.Clone()
@@ -414,6 +537,13 @@ for cidx in range(len(cats)):
         h_bpdf_ratio_sum += h_bpdf_ratio.Clone()
         for b,h in h_spdf.items(): h_spdf_sum[b] += h.Clone()
         h_spdf_ratio_sum += h_spdf_ratio.Clone()
+        if split_components is not None:
+          for b,h in split_components[0].items(): h_spdf_top_sum[b] += h.Clone()
+          for b,h in split_components[1].items(): h_spdf_thq_sum[b] += h.Clone()
+          for b,h in split_components[2].items(): h_spdf_res_sum[b]  += h.Clone()
+          h_spdf_ratio_top_sum += h_spdf_ratio_top.Clone()
+          h_spdf_ratio_thq_sum += h_spdf_ratio_thq.Clone()
+          h_spdf_ratio_res_sum += h_spdf_ratio_res.Clone()
         if opt.doCatWeights:
           h_wdata_sum += h_wdata.Clone()
           h_wdata_ratio_sum += h_wdata_ratio.Clone()
@@ -422,13 +552,25 @@ for cidx in range(len(cats)):
           h_wbpdf_ratio_sum += h_wbpdf_ratio.Clone()
           for b,h in h_wspdf.items(): h_wspdf_sum[b] += h.Clone()
           h_wspdf_ratio_sum += h_wspdf_ratio.Clone()
+          if split_components is not None:
+            for b,h in h_wspdf_top.items(): h_wspdf_top_sum[b] += h.Clone()
+            for b,h in h_wspdf_thq.items(): h_wspdf_thq_sum[b] += h.Clone()
+            for b,h in h_wspdf_res.items():  h_wspdf_res_sum[b]  += h.Clone()
+            h_wspdf_ratio_top_sum += h_wspdf_ratio_top.Clone()
+            h_wspdf_ratio_thq_sum += h_wspdf_ratio_thq.Clone()
+            h_wspdf_ratio_res_sum += h_wspdf_ratio_res.Clone()
 
   # Make plot for individual cats
   if not opt.skipIndividualCatPlots:
     print("    * making plot")
     if not os.path.isdir("./SplusBModels%s"%(opt.ext)): os.system("mkdir ./SplusBModels%s"%(opt.ext))
-    if opt.doBands: makeSplusBPlot(w,h_data,h_sbpdf,h_bpdf,h_spdf,h_data_ratio,h_bpdf_ratio,h_spdf_ratio,c,opt,df_bands,_reduceRange)
-    else: makeSplusBPlot(w,h_data,h_sbpdf,h_bpdf,h_spdf,h_data_ratio,h_bpdf_ratio,h_spdf_ratio,c,opt,None,_reduceRange)
+    split_args = None
+    split_ratio_args = None
+    if split_components is not None:
+      split_args = [split_components[0], split_components[1], split_components[2]]
+      split_ratio_args = [h_spdf_ratio_top, h_spdf_ratio_thq, h_spdf_ratio_res]
+    if opt.doBands: makeSplusBPlot(w,h_data,h_sbpdf,h_bpdf,h_spdf,h_data_ratio,h_bpdf_ratio,h_spdf_ratio,c,opt,df_bands,_reduceRange,split_args,split_ratio_args)
+    else: makeSplusBPlot(w,h_data,h_sbpdf,h_bpdf,h_spdf,h_data_ratio,h_bpdf_ratio,h_spdf_ratio,c,opt,None,_reduceRange,split_args,split_ratio_args)
 
   # Delete histograms
   h_data.Delete()
@@ -455,9 +597,19 @@ if( len(opt.cats.split(",")) > 1 )|( opt.cats == 'all' ):
   if opt.doSumCategories:
     if not os.path.isdir("./SplusBModels%s"%(opt.ext)): os.system("mkdir ./SplusBModels%s"%(opt.ext))
     print(" --> Making plot for sum of categories")
-    if opt.doBands: makeSplusBPlot(w,h_data_sum,h_sbpdf_sum,h_bpdf_sum,h_spdf_sum,h_data_ratio_sum,h_bpdf_ratio_sum,h_spdf_ratio_sum,'all',opt, df_bands,_reduceRange)
-    else: makeSplusBPlot(w,h_data_sum,h_sbpdf_sum,h_bpdf_sum,h_spdf_sum,h_data_ratio_sum,h_bpdf_ratio_sum,h_spdf_ratio_sum,'all',opt,None,_reduceRange)
-    if opt.doCatWeights:
-      print(" --> Making weighted plot for sum of categories")
-      if opt.doBands: makeSplusBPlot(w,h_wdata_sum,h_wsbpdf_sum,h_wbpdf_sum,h_wspdf_sum,h_wdata_ratio_sum,h_wbpdf_ratio_sum,h_wspdf_ratio_sum,'wall',opt, df_bands, _reduceRange)
-      else: makeSplusBPlot(w,h_wdata_sum,h_wsbpdf_sum,h_wbpdf_sum,h_wspdf_sum,h_wdata_ratio_sum,h_wbpdf_ratio_sum,h_wspdf_ratio_sum,'wall',opt, None, _reduceRange)
+  split_args_sum = None
+  split_ratio_args_sum = None
+  if opt.splitResonant and 'h_spdf_top_sum' in locals():
+    split_args_sum = [h_spdf_top_sum, h_spdf_thq_sum, h_spdf_res_sum]
+    split_ratio_args_sum = [h_spdf_ratio_top_sum, h_spdf_ratio_thq_sum, h_spdf_ratio_res_sum]
+  if opt.doBands: makeSplusBPlot(w,h_data_sum,h_sbpdf_sum,h_bpdf_sum,h_spdf_sum,h_data_ratio_sum,h_bpdf_ratio_sum,h_spdf_ratio_sum,'all',opt, df_bands,_reduceRange, split_args_sum, split_ratio_args_sum)
+  else: makeSplusBPlot(w,h_data_sum,h_sbpdf_sum,h_bpdf_sum,h_spdf_sum,h_data_ratio_sum,h_bpdf_ratio_sum,h_spdf_ratio_sum,'all',opt,None,_reduceRange, split_args_sum, split_ratio_args_sum)
+  if opt.doCatWeights:
+    print(" --> Making weighted plot for sum of categories")
+    split_args_wsum = None
+    split_ratio_args_wsum = None
+    if opt.splitResonant and 'h_wspdf_top_sum' in locals():
+      split_args_wsum = [h_wspdf_top_sum, h_wspdf_thq_sum, h_wspdf_res_sum]
+      split_ratio_args_wsum = [h_wspdf_ratio_top_sum, h_wspdf_ratio_thq_sum, h_wspdf_ratio_res_sum]
+    if opt.doBands: makeSplusBPlot(w,h_wdata_sum,h_wsbpdf_sum,h_wbpdf_sum,h_wspdf_sum,h_wdata_ratio_sum,h_wbpdf_ratio_sum,h_wspdf_ratio_sum,'wall',opt, df_bands, _reduceRange, split_args_wsum, split_ratio_args_wsum)
+    else: makeSplusBPlot(w,h_wdata_sum,h_wsbpdf_sum,h_wbpdf_sum,h_wspdf_sum,h_wdata_ratio_sum,h_wbpdf_ratio_sum,h_wspdf_ratio_sum,'wall',opt, None, _reduceRange, split_args_wsum, split_ratio_args_wsum)
