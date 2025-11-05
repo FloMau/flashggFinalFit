@@ -3,7 +3,7 @@
 backgroundScriptCfg = {
   
   # Setup
-  'inputWS':'/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation/outputForFinalFits/workspaces/Data/ws/allData.root', # location of 'allData.root' file
+  'inputWS':'/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation/outputForFinalFits_04Nov2025/workspaces/Data/ws/allData.root', # location of 'allData.root' file
   'cats':'auto', # auto: automatically inferred from input ws
   'catOffset':0, # add offset to category numbers (useful for categories from different allData.root files)  
   'ext':'tth_th_analysis', # extension to add to output directory

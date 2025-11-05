@@ -57,6 +57,8 @@ bool runFtestCheckWithToys=false;
 int mgg_low =100;
 int mgg_high =180;
 int nBinsForMass = 4*(mgg_high-mgg_low);
+const double blind_low = 120.;
+const double blind_high = 130.;
 
 RooRealVar *intLumi_ = new RooRealVar("IntLumi","hacked int lumi", 1000.);
 
@@ -315,8 +317,8 @@ void plot(RooRealVar *mass, RooAbsPdf *pdf, RooDataSet *data, string name,vector
  
   *prob = getGoodnessOfFit(mass,pdf,data,name);
   RooPlot *plot = mass->frame();
-  mass->setRange("unblindReg_1",mgg_low,115);
-  mass->setRange("unblindReg_2",135,mgg_high);
+  mass->setRange("unblindReg_1",mgg_low,blind_low);
+  mass->setRange("unblindReg_2",blind_high,mgg_high);
   if (BLIND) {
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_1"));
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_2"));
@@ -351,8 +353,8 @@ void plot(RooRealVar *mass, RooMultiPdf *pdfs, RooCategory *catIndex, RooDataSet
   leg->SetLineColor(1);
   RooPlot *plot = mass->frame();
 
-  mass->setRange("unblindReg_1",mgg_low,115);
-  mass->setRange("unblindReg_2",135,mgg_high);
+  mass->setRange("unblindReg_1",mgg_low,blind_low);
+  mass->setRange("unblindReg_2",blind_high,mgg_high);
   if (BLIND) {
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_1"));
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_2"));
@@ -416,7 +418,7 @@ void plot(RooRealVar *mass, RooMultiPdf *pdfs, RooCategory *catIndex, RooDataSet
   plotdata->GetPoint(ipoint, xtmp,ytmp);
   double bkgval = nomBkgCurve->interpolate(xtmp);
   if (BLIND) {
-   if ((xtmp > 115 ) && ( xtmp < 135) ) continue;
+    if ((xtmp > blind_low ) && ( xtmp < blind_high) ) continue;
   }
   std::cout << "[INFO] plotdata->Integral() " <<  plotdata->Integral() << " ( bins " << npoints  << ") hbkgplots[i]->Integral() " << hbplottmp->Integral() << " (bins " << hbplottmp->GetNbinsX() << std::endl;
  double errhi = plotdata->GetErrorYhigh(ipoint);
@@ -463,8 +465,8 @@ void plot(RooRealVar *mass, map<string,RooAbsPdf*> pdfs, RooDataSet *data, strin
   leg->SetLineColor(0);
   RooPlot *plot = mass->frame();
 
-  mass->setRange("unblindReg_1",mgg_low,115);
-  mass->setRange("unblindReg_2",135,mgg_high);
+  mass->setRange("unblindReg_1",mgg_low,blind_low);
+  mass->setRange("unblindReg_2",blind_high,mgg_high);
   if (BLIND) {
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_1"));
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_2"));
@@ -596,7 +598,7 @@ int main(int argc, char* argv[]){
   writeExtraText = true;       // if extra text
   extraText  = "Private Work";  // default extra text is "Preliminary"
   // lumi_13p6TeV = "34.7 fb^{-1}";
-  lumi_13p6TeV = "61.9 fb^{-1}";
+  lumi_13p6TeV = "62.4 fb^{-1}";
   lumi_8TeV  = "19.1 fb^{-1}"; // default is "19.7 fb^{-1}"
   lumi_7TeV  = "4.9 fb^{-1}";  // default is "5.1 fb^{-1}"
   lumi_sqrtS = "";       // used with iPeriod = 0, e.g. for simulation-only plots (default is an empty string)

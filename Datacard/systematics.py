@@ -159,7 +159,7 @@ experimental_systematics = [
                 #{'name':'lumi_13TeV_Correlated','title':'lumi_13TeV_Correlated','type':'constant','prior':'lnN','correlateAcrossYears':-1,'value':{'2016':'1.006','2017':'1.009','2018':'1.020'}},
                 #{'name':'lumi_13TeV_Correlated_1718','title':'lumi_13TeV_Correlated_1718','type':'constant','prior':'lnN','correlateAcrossYears':-1,'value':{'2016':'-','2017':'1.006','2018':'1.002'}},
                 {'name':'lumi_13p6TeV_2022','title':'lumi_13p6TeV_2022','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':"1.014"},
-                {'name':'lumi_13p6TeV_2023','title':'lumi_13p6TeV_2023','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':"1.02"},
+                {'name':'lumi_13p6TeV_2023','title':'lumi_13p6TeV_2023','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':"1.013"}, # merged unc for 2022+2023 is 1.2 %, could be done as in lumi_13TeV_Correlated
                 # {'name':'weight_Pileup','title':'CMS_hgg_PileupWeight','type':'factory','prior':'lnN','correlateAcrossYears':1},
                 # {'name':'weight_TriggerSF','title':'CMS_hgg_TriggerWeight','type':'factory','prior':'lnN','correlateAcrossYears':1},
                 # {'name':'weight_ElectronVetoSF','title':'CMS_hgg_ElectronVetoSF','type':'factory','prior':'lnN','correlateAcrossYears':1},
