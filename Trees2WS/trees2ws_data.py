@@ -103,10 +103,12 @@ else:
   leave()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# UPROOT file
-f = uproot.open(opt.inputTreeFile)
-if inputTreeDir == '': listOfTreeNames == f.keys()
-else: listOfTreeNames = f[inputTreeDir].keys()
+# UPROOT file (for fast inspection of tree names and array access)
+uf = uproot.open(opt.inputTreeFile)
+if inputTreeDir == '':
+  listOfTreeNames = uf.keys()
+else:
+  listOfTreeNames = uf[inputTreeDir].keys()
 # If cats = 'auto' then determine from list of trees
 if cats == 'auto':
   cats = []
@@ -142,22 +144,29 @@ for cat in cats:
   if inputTreeDir == '': treeName = "Data_%s_%s"%(sqrts__,cat)
   else: treeName = "%s/Data_%s_%s"%(inputTreeDir,sqrts__,cat)
   print("    * tree: %s"%treeName)
-  t = f.Get(treeName)
+  # Use uproot arrays for robust value access
+  arr = uf[treeName].arrays(dataVars, library="np")
 
   # Define dataset for cat
-  dname = "Data_%s_%s"%(sqrts__,cat)  
+  dname = "Data_%s_%s"%(sqrts__,cat)
   d = ROOT.RooDataSet(dname,dname,aset,'weight')
 
-  # Loop over events in tree and add to dataset with weight 1
-  for ev in t:
+  # Loop over events in array form and add to dataset with weight 1
+  for idx in range(len(arr[dataVars[0]])):
+    mval = float(arr["CMS_hgg_mass"][idx])
+    if not np.isfinite(mval):
+      continue
     if opt.applyMassCut:
-      if(getattr(ev,"CMS_hgg_mass") < float(opt.massCutRange.split(",")[0])) | (getattr(ev,"CMS_hgg_mass") > float(opt.massCutRange.split(",")[1])): continue
-    for var in dataVars: 
-      if var == "weight": continue
-      ws.var(var).setVal(getattr(ev,var))
+      lo, hi = [float(x) for x in opt.massCutRange.split(",")]
+      if mval < lo or mval > hi:
+        continue
+    # enforce RooRealVar bounds explicitly
+    if mval < ws.var("CMS_hgg_mass").getMin() or mval > ws.var("CMS_hgg_mass").getMax():
+      continue
+    ws.var("CMS_hgg_mass").setVal(mval)
     d.add(aset,1.)
 
-  # Add dataset to worksapce
+  # Add dataset to workspace
   getattr(ws,'import')(d)
   
 # Write workspace to file
