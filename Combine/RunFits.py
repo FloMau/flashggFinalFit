@@ -26,6 +26,7 @@ def get_options():
   parser.add_option('--doCustomCrab', dest='doCustomCrab', default=False, action="store_true", help="Load crab options from custom_crab.py file")
   parser.add_option('--crabMemory', dest='crabMemory', default='5900', help="Memory for crab job")
   parser.add_option('--dryRun', dest='dryRun', action="store_true", default=False, help="Only create submission files")
+  parser.add_option('--toysFile', dest='toysFile', default='', help="Use an existing toys file (e.g. SM Asimov) instead of --expectSignal -t -1")
   return parser.parse_args()
 (opt,args) = get_options()
 
@@ -46,7 +47,13 @@ def getPdfIndicesFromJson(pdfjson):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Options:
 # Expected/Observed
-exp_opts = '' if opt.doObserved else '--expectSignal 1 -t -1'
+if opt.doObserved:
+  exp_opts = ''
+else:
+  if opt.toysFile != '':
+    exp_opts = '--toysFile %s -t -1'%opt.toysFile
+  else:
+    exp_opts = '--expectSignal 1 -t -1'
 
 # Common opts for combine jobs
 common_opts = opt.commonOpts
@@ -117,8 +124,12 @@ for fidx in range(len(fits)):
   # File to load workspace
   if opt.snapshotWSFile != '': d_opts = '-d %s --snapshotName MultiDimFit'%opt.snapshotWSFile
   else:
-    #d_opts = '-d ../Datacard%s_%s.root'%(opt.ext,opt.mode)
-    d_opts = '-d %s/src/flashggFinalFit/Combine/Datacard%s_%s.root'%(os.environ['CMSSW_BASE'],opt.ext,opt.mode)
+    # If an extension is provided, text2workspace writes Datacard_<ext>.root
+    if opt.ext != '':
+      clean_ext = opt.ext.lstrip('_')
+      d_opts = '-d %s/src/flashggFinalFit/Combine/Datacard_%s.root'%(os.environ['CMSSW_BASE'],clean_ext)
+    else:
+      d_opts = '-d %s/src/flashggFinalFit/Combine/Datacard%s_%s.root'%(os.environ['CMSSW_BASE'],opt.ext,opt.mode)
 
   # If setParameters already in _fit_opts then add to fit opts and set pdfOpts = ''
   if( "setParameters" in _fit_opts )&( pdf_opts != '' ):
