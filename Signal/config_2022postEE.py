@@ -2,7 +2,7 @@
 signalScriptCfg = {
 
   # Setup
-  'inputWSDir':'/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation/outputForFinalFits_26Aug2025/workspaces/2022postEE/ws_signal/', # dir storing flashgg workspaces
+  'inputWSDir':'/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation/outputForFinalFits_01Dec2025/workspaces/2022postEE/ws_signal', # dir storing flashgg workspaces
   'procs':'auto', # if auto: inferred automatically from filenames (requires names to be of from *pythia8_{PROC}.root)
   'cats':'auto', # if auto: inferred automatically from (0) workspace
   #'ext':'earlyAnalysis_freeze_include', # output directory extension
@@ -21,5 +21,6 @@ signalScriptCfg = {
 
   # Job submission options
   'batch':'condor', # ['condor_lxplus','condor','SGE','IC','local']
-  'queue':'microcentury' # use hep.q for IC
+  'queue':'microcentury', # use hep.q for IC
+  'jobOpts':'request_memory = 8000'
 }

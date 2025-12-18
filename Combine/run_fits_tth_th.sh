@@ -12,7 +12,7 @@ source ../setup.sh
 
 # cp -v ../Signal/outdir_packaged/CMS-HGG*.root ./Models/signal/
 # cp -v ../Background/outdir_tth_th_analysis/CMS-HGG*.root ./Models/background/
-# cp -v ../Datacard/Datacard.txt .
+cp -v ../Datacard/Datacard_tth_th_analysis.txt ./Datacard.txt
 
 
 #####################################
@@ -118,5 +118,3 @@ source ../setup.sh
 # combine -M Significance ./Datacard_Z_tHq_plus_tHW.root --rMin 0 --rMax 25 -t -1 --setParameters r_tH=1,MH=125.38 --freezeParameters MH
 
 # combine -M AsymptoticLimits Datacard_Z_tHq_plus_tHW.root --run expected --rMin 0 --rMax 25 -t -1 --setParameters MH=125.38 --freezeParameters MH # -v 3
-
-## no pruning at all? at least > 0 should be good 

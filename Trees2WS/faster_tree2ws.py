@@ -11,9 +11,34 @@ from typing import Dict
 MODE_INPUTS: Dict[str, str] = {
     # signal modes
     "tth": "ttH_{era}/output_TTHToGG_M125_13TeV_amcatnlo_pythia8.root",
+    "tthCPodd": "ttH_CPodd_{era}/output_TTHToGG_CP_odd_M125_13TeV_amcatnlo_pythia8.root",
+    "tthKt0p7Ktt0p7": "ttH_Kt0p7Ktt0p7_{era}/output_TTHToGG_Kt0p7Ktt0p7_M125_13TeV_amcatnlo_pythia8.root",
+    "tthKt0p7Kttm0p7": "ttH_Kt0p7Kttm0p7_{era}/output_TTHToGG_Kt0p7Kttm0p7_M125_13TeV_amcatnlo_pythia8.root",
+    "tthKt0Kttm1": "ttH_Kt0Kttm1_{era}/output_TTHToGG_Kt0Kttm1_M125_13TeV_amcatnlo_pythia8.root",
+    "tthKt0Ktt0": "ttH_Kt0Ktt0_{era}/output_TTHToGG_Kt0Ktt0_M125_13TeV_amcatnlo_pythia8.root",
     "tHqLep": "tHqLep_{era}/output_THQtoGG_lep_M125_13TeV_amcatnlo_pythia8.root",
     "tHqHad": "tHqHad_{era}/output_THQtoGG_had_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqLepCPodd": "tHqLep_CPodd_{era}/output_THQtoGG_lep_CPodd_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqHadCPodd": "tHqHad_CPodd_{era}/output_THQtoGG_had_CPodd_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqLepKtm1Ktt0": "tHqLep_Ktm1Ktt0_{era}/output_THQtoGG_lep_Ktm1Ktt0_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqHadKtm1Ktt0": "tHqHad_Ktm1Ktt0_{era}/output_THQtoGG_had_Ktm1Ktt0_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqLepKt0p7Ktt0p7": "tHqLep_Kt0p7Ktt0p7_{era}/output_THQtoGG_lep_Kt0p7Ktt0p7_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqHadKt0p7Ktt0p7": "tHqHad_Kt0p7Ktt0p7_{era}/output_THQtoGG_had_Kt0p7Ktt0p7_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqLepKt0p7Kttm0p7": "tHqLep_Kt0p7Kttm0p7_{era}/output_THQtoGG_lep_Kt0p7Kttm0p7_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqHadKt0p7Kttm0p7": "tHqHad_Kt0p7Kttm0p7_{era}/output_THQtoGG_had_Kt0p7Kttm0p7_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqLepKt0Kttm1": "tHqLep_Kt0Kttm1_{era}/output_THQtoGG_lep_Kt0Kttm1_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqHadKt0Kttm1": "tHqHad_Kt0Kttm1_{era}/output_THQtoGG_had_Kt0Kttm1_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqLepKt0Ktt0": "tHqLep_Kt0Ktt0_{era}/output_THQtoGG_lep_Kt0Ktt0_M125_13TeV_amcatnlo_pythia8.root",
+    "tHqHadKt0Ktt0": "tHqHad_Kt0Ktt0_{era}/output_THQtoGG_had_Kt0Ktt0_M125_13TeV_amcatnlo_pythia8.root",
     "tHW": "tHW_{era}/output_THWtoGG_M125_13TeV_madgraph_pythia8.root",
+    "tHWCPodd": "tHW_CPodd_{era}/output_THWtoGG_CPodd_M125_13TeV_madgraph_pythia8.root",
+    "tHWKtm1Ktt0": "tHW_Ktm1Ktt0_{era}/output_THWtoGG_Ktm1Ktt0_M125_13TeV_madgraph_pythia8.root",
+    "tHWKt0p7Ktt0p7": "tHW_Kt0p7Ktt0p7_{era}/output_THWtoGG_Kt0p7Ktt0p7_M125_13TeV_madgraph_pythia8.root",
+    "tHWKt0p7Kttm0p7": "tHW_Kt0p7Kttm0p7_{era}/output_THWtoGG_Kt0p7Kttm0p7_M125_13TeV_madgraph_pythia8.root",
+    "tHWKt0Kttm1": "tHW_Kt0Kttm1_{era}/output_THWtoGG_Kt0Kttm1_M125_13TeV_madgraph_pythia8.root",
+    "tHWKt0Ktt0": "tHW_Kt0Ktt0_{era}/output_THWtoGG_Kt0Ktt0_M125_13TeV_madgraph_pythia8.root",
+    # data
+    "Data": "Data/allData.root",
     # resonant backgrounds
     "vh": "VH_{era}/output_VHToGG_M125_13TeV_amcatnlo_pythia8.root",
     "ggh": "GluGluH_{era}/output_GluGluHToGG_M125_13TeV_amcatnloFXFX_pythia8.root",
@@ -29,7 +54,16 @@ def build_input_path(root_base: str, era: str, mode: str) -> str:
     return os.path.join(root_base, rel)
 
 
-def run_trees2ws(input_config: str, input_tree_file: str, mass: int, mode: str, era: str, wsdir: str, do_systematics: bool):
+def run_trees2ws(
+    input_config: str,
+    input_tree_file: str,
+    mass: int,
+    mode: str,
+    era: str,
+    wsdir: str,
+    do_systematics: bool,
+    do_in_out_splitting: bool,
+):
     cmd = [
         "python3", "trees2ws.py",
         "--inputConfig", input_config,
@@ -38,15 +72,25 @@ def run_trees2ws(input_config: str, input_tree_file: str, mass: int, mode: str, 
         "--productionMode", mode,
         "--year", era,
         "--outputWSDir", wsdir,
-        "--doInOutSplitting",
     ]
+    if do_in_out_splitting:
+        cmd.append("--doInOutSplitting")
     if do_systematics:
         cmd.append("--doSystematics")
     print("Running:", " ".join(cmd))
     subprocess.check_call(cmd)
 
 
-def run_one_task(input_config: str, root_base: str, mass: int, mode: str, era: str, wsdir: str, do_systematics: bool) -> str:
+def run_one_task(
+    input_config: str,
+    root_base: str,
+    mass: int,
+    mode: str,
+    era: str,
+    wsdir: str,
+    do_systematics: bool,
+    do_in_out_splitting: bool,
+) -> str:
     input_tree_file = build_input_path(root_base, era, mode)
     if not os.path.isfile(input_tree_file):
         msg = f"[WARN] Input file missing for mode {mode}, era {era}: {input_tree_file}"
@@ -60,6 +104,7 @@ def run_one_task(input_config: str, root_base: str, mass: int, mode: str, era: s
         era=era,
         wsdir=wsdir,
         do_systematics=do_systematics,
+        do_in_out_splitting=do_in_out_splitting,
     )
     return f"[OK] {mode} {era}"
 
@@ -75,6 +120,11 @@ def main():
     parser.add_argument("--clean", action="store_true", help="Wipe base-ws-dir before running")
     parser.add_argument("--do-systematics", action="store_true", help="Pass --doSystematics to trees2ws.py")
     parser.add_argument("--max-procs", type=int, default=1, help="Max concurrent trees2ws jobs (>=2 enables parallel)")
+    parser.add_argument(
+        "--do-in-out-splitting",
+        action="store_true",
+        help="Forward --doInOutSplitting to trees2ws.py (use for fiducial runs).",
+    )
 
     args = parser.parse_args()
 
@@ -111,6 +161,7 @@ def main():
                     era,
                     era_wsdirs[era],
                     args.do_systematics,
+                    args.do_in_out_splitting,
                 ): (mode, era)
                 for (mode, era) in tasks
             }
@@ -137,6 +188,7 @@ def main():
                         era=era,
                         wsdir=wsdir,
                         do_systematics=args.do_systematics,
+                        do_in_out_splitting=args.do_in_out_splitting,
                     )
                     print(msg)
                 except subprocess.CalledProcessError as cpe:

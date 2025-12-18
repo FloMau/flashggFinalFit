@@ -51,10 +51,13 @@ if opt.inputConfig != '':
     options['smears']       = _cfg['smears']
     options['batch']        = _cfg['batch']
     options['queue']        = _cfg['queue']
+    options['jobOpts']      = _cfg.get('jobOpts', opt.jobOpts)
     # Options from command line
     options['mode']                    = opt.mode
     options['modeOpts']                = opt.modeOpts
-    options['jobOpts']                 = opt.jobOpts
+    # Command-line jobOpts override config
+    if opt.jobOpts:
+      options['jobOpts'] = opt.jobOpts
     options['groupSignalFitJobsByCat'] = opt.groupSignalFitJobsByCat
     options['printOnly']               = opt.printOnly
 
