@@ -8,7 +8,7 @@
 <use name="root"/>
 <use name="rootcint"/>
 <lib name="TreePlayer"/>
-<!-- <lib name="PyROOT"/> -->
+<lib name="PyROOT"/>
 <export>
 <lib name="1"/>
 </export>

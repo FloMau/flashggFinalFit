@@ -20,7 +20,7 @@ parser.add_option("--makeCrossCheckProfPlots",default=False,action="store_true",
 parser.add_option("--massStep",type="float",default=0.5,help="Mass step for calculating bands. Use a large number like 5 for quick running")
 parser.add_option("--nllTolerance",type="float",default=0.05,help="Tolerance for nll calc in %")
 parser.add_option("--higgsResolution",type='float',default=1.,help="Resolution of Higgs to calculate bakg in 1sigma range around signal")
-parser.add_option("--unblind",default=False,action="store_true",help="Blind the mass spectrum in the range [115,135]")
+parser.add_option("--unblind",default=False,action="store_true",help="Blind the mass spectrum in the range [120,130]")
 parser.add_option("--runLocal",default=False,action="store_true",help="Run locally")
 parser.add_option("--dryRun",default=False,action="store_true",help="Dont submit jobs")
 parser.add_option("-q","--queue",default="espresso",help="Which batch queue")

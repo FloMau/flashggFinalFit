@@ -803,7 +803,7 @@ int main(int argc, char* argv[]){
      if (mass->getVal()== mhLow) {/*nEntriesInIgnoredRegion0+=data->weight() ;*/ continue;} // ignore events in overflow bins
      if (mass->getVal() < min) min=mass->getVal(); // set min
      if (mass->getVal() > max) max=mass->getVal(); // set max
-     if (mass->getVal() > 135 || mass->getVal() < 115){ // ok, if mass is outside of blinded region, add it to our fakedata holder
+     if (mass->getVal() > 130 || mass->getVal() < 120){ // ok, if mass is outside of blinded region, add it to our fakedata holder
      fakedata->add( RooArgList(*mass),data->weight() );
      } else { // if not, get want to teh weight to the tally of nEvents to generated for the blind region
      nEntriesInBlindRegion+=data->weight();
@@ -861,8 +861,8 @@ int main(int argc, char* argv[]){
 	plot->Draw();
   
   //set ranges corresponding to blinded regions.
-  mass->setRange("unblind_up",135,180);
-  mass->setRange("unblind_down",mhLow,115); 
+  mass->setRange("unblind_up",130,180);
+  mass->setRange("unblind_down",mhLow,120); 
   
   // and plot fake data in the unblinided region
   fakedata->plotOn(plot,CutRange("unblind_down,unblind_up"),Binning(nBins));
@@ -913,7 +913,7 @@ int main(int argc, char* argv[]){
    for (int iEntry =0 ; iEntry < tmpDatasetSig->numEntries() ; iEntry ++){
       mass->setVal(tmpDatasetSig->get(iEntry)->getRealValue("CMS_hgg_mass")); 
       if (iEntry%100==0) std::cout << "[DEBUG] mass value sig " << mass->getVal() << std::endl;
-      if (mass->getVal() < 135 && mass->getVal() > 115){
+      if (mass->getVal() < 130 && mass->getVal() > 120){
         fakedataExtra->add( RooArgList(*mass),tmpDatasetSig->weight() );
         filledEntries++;
         if (filledEntries > (int)nEntriesFromSig ) {
@@ -948,7 +948,7 @@ int main(int argc, char* argv[]){
     mass->setVal(tmpDataset->get(iEntry)->getRealValue("CMS_hgg_mass")); 
     //if (mass->getVal()<100) std::cout << "[DEBUG] mass value nkg LESS THAN  100 " << mass->getVal() << std::endl;
     if (iEntry%1000==0) std::cout << "[INFO] mass value bkg " << mass->getVal() << std::endl;
-    if (mass->getVal() < 135 && mass->getVal() > 115){ // event in blinded region, so add it in!
+    if (mass->getVal() < 130 && mass->getVal() > 120){ // event in blinded region, so add it in!
       fakedataExtra->add( RooArgList(*mass),tmpDataset->weight() );
       fakedataExtraBkgOnly->add( RooArgList(*mass),tmpDataset->weight() );
       filledEntries++;
@@ -1008,4 +1008,3 @@ int main(int argc, char* argv[]){
 
   return 0;
 }
-

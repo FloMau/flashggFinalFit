@@ -649,8 +649,8 @@ void plotAllPdfs(RooRealVar *mgg, RooAbsData *data, RooMultiPdf *mpdf, RooCatego
 	plot->GetXaxis()->SetTitle("m_{#gamma#gamma} (GeV)");
 	plot->GetYaxis()->SetTitle("Events");
 	if (!unblind) {
-		mgg->setRange("unblind_up",135,180);
-		mgg->setRange("unblind_down",100,115);
+		mgg->setRange("unblind_up",130,180);
+		mgg->setRange("unblind_down",100,120);
 		data->plotOn(plot,Binning(80),CutRange("unblind_down,unblind_up"));
 	}
 	else {
@@ -1022,8 +1022,8 @@ int main(int argc, char* argv[]){
 		plot->Draw();
 
 		if (!unblind) {
-			mgg->setRange("unblind_up",135,180);
-			mgg->setRange("unblind_down",100,115);
+			mgg->setRange("unblind_up",130,180);
+			mgg->setRange("unblind_down",100,120);
 			data->plotOn(plot,Binning(80),CutRange("unblind_down,unblind_up"));
 		}
 		else {
@@ -1147,7 +1147,7 @@ int main(int argc, char* argv[]){
   plotdata->GetPoint(ipoint, xtmp,ytmp);
   double bkgval = nomBkgCurve->interpolate(xtmp);
   if (!unblind) {
-   if ((xtmp > 115 ) && ( xtmp < 135) ) continue;
+   if ((xtmp > 120 ) && ( xtmp < 130) ) continue;
   }
   //std::cout << "[INFO] plotdata->Integral() " <<  plotdata->Integral() << " ( bins " << npoints  << ") hbkgplots[i]->Integral() " << hbplottmp->Integral() << " (bins " << hbplottmp->GetNbinsX() << std::endl;
  double errhi = plotdata->GetErrorYhigh(ipoint);
@@ -1195,4 +1195,3 @@ int main(int argc, char* argv[]){
 
 		return 0;
 	}
-

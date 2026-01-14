@@ -60,11 +60,10 @@ bool BLIND = true;
 bool runFtestCheckWithToys=false;
 int mgg_low =100;
 int mgg_high =180;
-const int blind_low = 115;
-const int blind_high = 135;
+const int blind_low = 120;
+const int blind_high = 130;
 int nBinsForMass = 4*(mgg_high-mgg_low);
-const double blind_low = 120.;
-const double blind_high = 130.;
+const char* MASS_FIT_RANGE = "low,high";
 
 RooRealVar *intLumi_ = new RooRealVar("IntLumi","hacked int lumi", 1000.);
 
@@ -697,8 +696,7 @@ int main(int argc, char* argv[]){
  
   setTDRStyle();
   writeExtraText = true;       // if extra text
-  extraText  = "Private Work";  // default extra text is "Preliminary"
-  // lumi_13p6TeV = "34.7 fb^{-1}";
+  extraText  = "Private Work"; // custom label
   lumi_13p6TeV = "62.4 fb^{-1}";
   lumi_8TeV  = "19.1 fb^{-1}"; // default is "19.7 fb^{-1}"
   lumi_7TeV  = "4.9 fb^{-1}";  // default is "5.1 fb^{-1}"
