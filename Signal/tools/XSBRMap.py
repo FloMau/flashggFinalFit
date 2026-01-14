@@ -1,6 +1,10 @@
 # Python script to hold XS * BR for normalisation of signal models
+import os
 from collections import OrderedDict as od
+
+
 from commonObjects import *
+from commonTools import procToDatacardName
   
 # Add analyses to globalReplacementMap. See "STXS" as an example
 globalXSBRMap = od()
@@ -235,11 +239,63 @@ globalXSBRMap['tth_th_analysis']['bbh_incl'] = {'mode':'constant','factor':0.521
 # Alias for decorrelated setup: reuse the same XSBR map
 globalXSBRMap['tth_th_analysis_noDeco'] = globalXSBRMap['tth_th_analysis']
 
+# Fiducial XS map (in/out splitting) built from ttH/tH inclusive map
+def _build_inout_map(base_map):
+    inout_map = od()
+    inout_map["decay"] = base_map["decay"]
+    for proc, cfg in base_map.items():
+        if proc == "decay":
+            continue
+        if proc.endswith("_incl") or proc.endswith("_in") or proc.endswith("_out"):
+            continue
+        base_name = procToDatacardName(proc)
+        fallback = {"VH": "vh", "VBF": "vbf", "GG2H": "ggh", "TTH": "tth"}
+        base_name = fallback.get(proc, base_name)
+        in_key = f"{base_name}_in"
+        out_key = f"{base_name}_out"
+        inout_map[in_key] = dict(cfg)
+        inout_map[out_key] = dict(cfg)
+    return inout_map
 
-# THE STUFF BELOW NEEDS TO BE ADAPTED TO OUR FIDUCIAL XS LATER ON!!!
+
+def _apply_sm_rates_to_fiducial(fiducial_map, sm_map):
+    sm_rates = {
+        "tth": sm_map["TTH"]["factor"],
+        "thw": sm_map["tHW"]["factor"],
+        "thqlep": sm_map["tHqLep"]["factor"],
+        "thqhad": sm_map["tHqHad"]["factor"],
+    }
+    updated = od()
+    updated["decay"] = fiducial_map["decay"]
+    for proc, cfg in fiducial_map.items():
+        if proc == "decay":
+            continue
+        new_cfg = dict(cfg)
+        proc_lower = proc.lower()
+        if proc_lower.startswith("tth"):
+            new_cfg["factor"] = sm_rates["tth"]
+        elif proc_lower.startswith("thw"):
+            new_cfg["factor"] = sm_rates["thw"]
+        elif proc_lower.startswith("thqlep"):
+            new_cfg["factor"] = sm_rates["thqlep"]
+        elif proc_lower.startswith("thqhad"):
+            new_cfg["factor"] = sm_rates["thqhad"]
+        updated[proc] = new_cfg
+    return updated
+
+
+globalXSBRMap["tth_th_analysis_fiducial"] = _build_inout_map(
+    globalXSBRMap["tth_th_analysis"]
+)
+# Override fiducial rates with SM values (keep BSM map above for easy rollback).
+globalXSBRMap["tth_th_analysis_fiducial"] = _apply_sm_rates_to_fiducial(
+    globalXSBRMap["tth_th_analysis_fiducial"],
+    globalXSBRMap["tth_th_analysis"],
+)
+globalXSBRMap["tth_th_analysis_fiducial_noDeco"] = globalXSBRMap["tth_th_analysis_fiducial"]
 globalXSBRMap['tth_th_analysisInOut'] = od()
 globalXSBRMap['tth_th_analysisInOut']['decay'] = {'mode':'hgg'}
-# Also adding the lower-case strings (Nico convention)
+# Also adding the lower-case strings
 globalXSBRMap['tth_th_analysisInOut']['ggh_in'] = {'mode':'constant','factor':51.96}
 globalXSBRMap['tth_th_analysisInOut']['vbf_in'] = {'mode':'constant','factor':4.067}
 globalXSBRMap['tth_th_analysisInOut']['vh_in'] = {'mode':'constant','factor':2.3781}

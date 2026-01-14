@@ -95,5 +95,47 @@
     "fits":"profile2D:statonly_fixedMH:all",
     "points":"5000:50",
     "fit_opts":"--freezeParameters MH --setParameterRanges r_tHq=-3.0,8.0:r_ttH=-5,30 --saveSpecifiedNuis all"
+  },
+  "r_2D_fiducial":{
+    "pois":"r_tHq,r_ttH",
+    "fits":"profile2D:statonly_fixedMH:all",
+    "points":"5000:50",
+    "fit_opts":"--freezeParameters MH --setParameterRanges r_tHq=-5.0,20.0:r_ttH=-0.5,2.5 --saveSpecifiedNuis all"
+  },
+  "r_2D_CPodd_fiducial":{
+    "pois":"r_tHq,r_ttH",
+    "fits":"profile2D:statonly_fixedMH:all",
+    "points":"5000:50",
+    "fit_opts":"--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+  },
+  "r_2D_Ktm1Ktt0_fiducial":{
+    "pois":"r_tHq,r_ttH",
+    "fits":"profile2D:statonly_fixedMH:all",
+    "points":"5000:50",
+    "fit_opts":"--freezeParameters MH --setParameterRanges r_tHq=-0.5,2.0:r_ttH=-0.5,2.5 --saveSpecifiedNuis all"
+  },
+  "r_2D_Kt0p7Ktt0p7_fiducial":{
+    "pois":"r_tHq,r_ttH",
+    "fits":"profile2D:statonly_fixedMH:all",
+    "points":"5000:50",
+    "fit_opts":"--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all"
+  },
+  "r_2D_Kt0p7Kttm0p7_fiducial":{
+    "pois":"r_tHq,r_ttH",
+    "fits":"profile2D:statonly_fixedMH:all",
+    "points":"5000:50",
+    "fit_opts":"--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all"
+  },
+  "r_2D_Kt0Kttm1_fiducial":{
+    "pois":"r_tHq,r_ttH",
+    "fits":"profile2D:statonly_fixedMH:all",
+    "points":"5000:50",
+    "fit_opts":"--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+  },
+  "r_2D_Kt0Ktt0_fiducial":{
+    "pois":"r_tHq,r_ttH",
+    "fits":"profile2D:statonly_fixedMH:all",
+    "points":"5000:50",
+    "fit_opts":"--freezeParameters MH --setParameterRanges r_tHq=-3.0,8.0:r_ttH=-5,30 --saveSpecifiedNuis all"
   }
 }

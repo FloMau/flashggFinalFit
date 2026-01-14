@@ -220,6 +220,61 @@ XSBRMap['tth_th_analysis']['bbh_incl'] = {'mode':'constant','factor':0.5213}
 # Alias for decorrelated setup: reuse the same XSBR map
 XSBRMap['tth_th_analysis_noDeco'] = XSBRMap['tth_th_analysis']
 
+# Fiducial XS map (in/out splitting) built from ttH/tH inclusive map
+def _build_inout_map(base_map):
+  inout_map = od()
+  inout_map["decay"] = base_map["decay"]
+  for proc, cfg in base_map.items():
+    if proc == "decay":
+      continue
+    if proc.endswith("_incl") or proc.endswith("_in") or proc.endswith("_out"):
+      continue
+    base_name = procToDatacardName(proc)
+    fallback = {"VH": "vh", "VBF": "vbf", "GG2H": "ggh", "TTH": "tth"}
+    base_name = fallback.get(proc, base_name)
+    in_key = "%s_in" % base_name
+    out_key = "%s_out" % base_name
+    inout_map[in_key] = dict(cfg)
+    inout_map[out_key] = dict(cfg)
+  return inout_map
+
+
+def _apply_sm_rates_to_fiducial(fiducial_map, sm_map):
+  sm_rates = {
+    "tth": sm_map["TTH"]["factor"],
+    "thw": sm_map["tHW"]["factor"],
+    "thqlep": sm_map["tHqLep"]["factor"],
+    "thqhad": sm_map["tHqHad"]["factor"],
+  }
+  updated = od()
+  updated["decay"] = fiducial_map["decay"]
+  for proc, cfg in fiducial_map.items():
+    if proc == "decay":
+      continue
+    new_cfg = dict(cfg)
+    proc_lower = proc.lower()
+    if proc_lower.startswith("tth"):
+      new_cfg["factor"] = sm_rates["tth"]
+    elif proc_lower.startswith("thw"):
+      new_cfg["factor"] = sm_rates["thw"]
+    elif proc_lower.startswith("thqlep"):
+      new_cfg["factor"] = sm_rates["thqlep"]
+    elif proc_lower.startswith("thqhad"):
+      new_cfg["factor"] = sm_rates["thqhad"]
+    updated[proc] = new_cfg
+  return updated
+
+
+XSBRMap["tth_th_analysis_fiducial"] = _build_inout_map(
+  XSBRMap["tth_th_analysis"]
+)
+# Override fiducial rates with SM values (keep BSM map above for easy rollback).
+XSBRMap["tth_th_analysis_fiducial"] = _apply_sm_rates_to_fiducial(
+  XSBRMap["tth_th_analysis_fiducial"],
+  XSBRMap["tth_th_analysis"],
+)
+XSBRMap["tth_th_analysis_fiducial_noDeco"] = XSBRMap["tth_th_analysis_fiducial"]
+
 
 # Early Run 3 Hgg analysis WITH in/out splitting TBD
 XSBRMap['tth_th_analysisInOut'] = od()

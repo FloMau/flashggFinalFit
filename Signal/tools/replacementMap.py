@@ -318,6 +318,7 @@ globalReplacementMap["tth_th_analysis"]["catRVMap"] = od()
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["tH_lep_1"] = "tH_lep_1"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["tH_lep_2"]  = "tH_lep_2"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["tH_lep_3"]  = "tH_lep_3"
+globalReplacementMap["tth_th_analysis"]["catRVMap"]["tH_lep_4"]  = "tH_lep_4"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["ttH_lep_1"] = "ttH_lep_1"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["ttH_lep_2"]  = "ttH_lep_2"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["ttH_lep_3"]  = "ttH_lep_3"
@@ -334,6 +335,17 @@ globalReplacementMap["tth_th_analysis"]["catRVMap"]["ttH_had_4"]  = "ttH_had_4"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["bkg_had"] = "bkg_had"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["ttH_lep_3"] = "ttH_lep_3"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["bkg_lep"]  = "bkg_lep"
+
+# Fiducial setup: use tth_in replacements (no incl/out in fiducial workspaces)
+globalReplacementMap["tth_th_analysis_fiducial"] = od()
+globalReplacementMap["tth_th_analysis_fiducial"]["procWV"] = "tth_in"
+globalReplacementMap["tth_th_analysis_fiducial"]["catWV"] = globalReplacementMap["tth_th_analysis"]["catWV"]
+globalReplacementMap["tth_th_analysis_fiducial"]["procRVMap"] = od(
+    (key, "tth_in") for key in globalReplacementMap["tth_th_analysis"]["procRVMap"]
+)
+globalReplacementMap["tth_th_analysis_fiducial"]["catRVMap"] = od(
+    globalReplacementMap["tth_th_analysis"]["catRVMap"]
+)
 
 ###################################################################################################################################################################################################
 ###################################################################################################################################################################################################

@@ -12,8 +12,8 @@
 TString cmsText     = "CMS";
 float cmsTextFont   = 61;  // default is helvetic-bold
 
-bool writeExtraText = false;
-TString extraText   = "Simulation Preliminary";
+bool writeExtraText = true;
+TString extraText   = "Private Work";
 float extraTextFont = 52;  // default is helvetica-italics
 
 // text sizes and text offsets with respect to the top frame
