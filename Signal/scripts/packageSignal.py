@@ -12,6 +12,7 @@ def get_options():
   parser.add_option("--cat", dest='cat', default='RECO_0J_PTH_0_10_Tag0', help="RECO category to package")
   parser.add_option("--exts", dest='exts', default='', help="Comma separate list of extensions")
   parser.add_option("--outputExt", dest='outputExt', default='packaged', help="Output extension")
+  parser.add_option("--inputDir", dest='inputDir', default=swd__, help="Input directory containing outdir_<ext>/signalFit/output")
   parser.add_option("--outputDir", dest='outputDir', default=swd__, help="Output directory")
   parser.add_option("--massPoints", dest='massPoints', default='120,125,130', help="Comma separated list of mass points")
   parser.add_option("--mergeYears", dest='mergeYears', default=False, action="store_true", help="Merge specified categories across years")
@@ -28,33 +29,38 @@ def rooiter(x):
 
 # Extract all files to be merged
 fNames = {}
-if opt.outputDir == swd__:
-  for ext in opt.exts.split(","): fNames[ext] = glob.glob("outdir_%s/signalFit/output/CMS-HGG_sigfit_%s_*_%s.root"%(ext,ext,opt.cat))
-else:
-  for ext in opt.exts.split(","): fNames[ext] = glob.glob("%s/outdir_%s/signalFit/output/CMS-HGG_sigfit_%s_*_%s.root"%(opt.outputDir,ext,ext,opt.cat))
+input_base = opt.inputDir or swd__
+for ext in opt.exts.split(","):
+  fNames[ext] = glob.glob("%s/outdir_%s/signalFit/output/CMS-HGG_sigfit_%s_*_%s.root"%(input_base,ext,ext,opt.cat))
+  if len(fNames[ext]) == 0:
+    print(" --> [ERROR] No signalFit inputs found for ext=%s cat=%s under %s/outdir_%s/signalFit/output"%(
+      ext, opt.cat, input_base, ext))
+    exit(1)
 
 # Define ouput packaged workspace
 print(" --> Packaging output workspaces")
 packagedWS = ROOT.RooWorkspace("wsig_13TeV","wsig_13TeV")
 packagedWS.imp = getattr(packagedWS,"import")
 
-# Extract merged datasets
+# Extract merged datasets (skip for bkg_had to avoid ROOT 1GB bytecount limit).
 data_merged = {}
 data_merged_names = []
-for mp in opt.massPoints.split(","): 
-  data_merged["m%s"%mp] = ROOT.TFile(fNames[opt.exts.split(",")[0]][0]).Get("wsig_13TeV").data("sig_mass_m%s_%s"%(mp,opt.cat)).emptyClone("sig_mass_m%s_%s"%(mp,opt.cat))
-  data_merged_names.append( data_merged["m%s"%mp].GetName() )
+skip_merged = (opt.cat == "bkg_had")
+if not skip_merged:
+  for mp in opt.massPoints.split(","):
+    data_merged["m%s"%mp] = ROOT.TFile(fNames[opt.exts.split(",")[0]][0]).Get("wsig_13TeV").data("sig_mass_m%s_%s"%(mp,opt.cat)).emptyClone("sig_mass_m%s_%s"%(mp,opt.cat))
+    data_merged_names.append(data_merged["m%s"%mp].GetName())
 
-for ext, fNames_by_ext in fNames.items():
-  for fName in fNames_by_ext:
-    for mp in opt.massPoints.split(","):
-      d = ROOT.TFile(fName).Get("wsig_13TeV").data("sig_mass_m%s_%s"%(mp,opt.cat))
-      for i in range(d.numEntries()):
-        p = d.get(i)
-        w = d.weight()
-        data_merged["m%s"%mp].add(p,w)
-  
-for _data in data_merged.values(): packagedWS.imp(_data)
+  for ext, fNames_by_ext in fNames.items():
+    for fName in fNames_by_ext:
+      for mp in opt.massPoints.split(","):
+        d = ROOT.TFile(fName).Get("wsig_13TeV").data("sig_mass_m%s_%s"%(mp,opt.cat))
+        for i in range(d.numEntries()):
+          p = d.get(i)
+          w = d.weight()
+          data_merged["m%s"%mp].add(p,w)
+
+  for _data in data_merged.values(): packagedWS.imp(_data)
         
 # Loop over input signal fit workspaces
 for ext, fNames_by_ext in fNames.items():
@@ -88,13 +94,18 @@ if opt.outputDir == swd__:
     print(" --> Writing to: ./outdir_%s/CMS-HGG_sigfit_%s_%s_%s.root"%(opt.outputExt,opt.outputExt,opt.cat,opt.year))
     f = ROOT.TFile("./outdir_%s/CMS-HGG_sigfit_%s_%s_%s.root"%(opt.outputExt,opt.outputExt,opt.cat,opt.year),"RECREATE")
 else:
-  if not os.path.isdir("%s/outdir_packaged%s"%(opt.outputDir,opt.outputExt)): os.system("mkdir %s/outdir_packaged%s"%(opt.outputDir,opt.outputExt))
+  if not os.path.isdir(opt.outputDir): os.system("mkdir -p %s"%opt.outputDir)
+  packaged_suffix = opt.outputExt if opt.outputExt else ""
+  if opt.outputExt == "packaged":
+    packaged_suffix = ""
+  elif packaged_suffix and not packaged_suffix.startswith("_"):
+    packaged_suffix = "_%s"%packaged_suffix
   if opt.mergeYears:
-    print(" --> Writing to: %s/outdir_packaged%s/CMS-HGG_sigfit_packaged%s_%s.root"%(opt.outputDir,opt.outputExt,opt.outputExt,opt.cat))
-    f = ROOT.TFile("%s/outdir_packaged%s/CMS-HGG_sigfit_packaged%s_%s.root"%(opt.outputDir,opt.outputExt,opt.outputExt,opt.cat),"RECREATE")
+    print(" --> Writing to: %s/CMS-HGG_sigfit_packaged%s_%s.root"%(opt.outputDir,packaged_suffix,opt.cat))
+    f = ROOT.TFile("%s/CMS-HGG_sigfit_packaged%s_%s.root"%(opt.outputDir,packaged_suffix,opt.cat),"RECREATE")
   else:
-    print(" --> Writing to: %s/outdir_packaged%s/CMS-HGG_sigfit_packaged%s_%s_%s.root"%(opt.outputDir,opt.outputExt,opt.outputExt,opt.cat,opt.year))
-    f = ROOT.TFile("%s/outdir_packaged%s/CMS-HGG_sigfit_packaged%s_%s_%s.root"%(opt.outputDir,opt.outputExt,opt.outputExt,opt.cat,opt.year),"RECREATE")
+    print(" --> Writing to: %s/CMS-HGG_sigfit_packaged%s_%s_%s.root"%(opt.outputDir,packaged_suffix,opt.cat,opt.year))
+    f = ROOT.TFile("%s/CMS-HGG_sigfit_packaged%s_%s_%s.root"%(opt.outputDir,packaged_suffix,opt.cat,opt.year),"RECREATE")
 
 packagedWS.Write()
 f.Close()

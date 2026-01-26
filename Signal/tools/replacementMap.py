@@ -336,6 +336,17 @@ globalReplacementMap["tth_th_analysis"]["catRVMap"]["bkg_had"] = "bkg_had"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["ttH_lep_3"] = "ttH_lep_3"
 globalReplacementMap["tth_th_analysis"]["catRVMap"]["bkg_lep"]  = "bkg_lep"
 
+# Guard against new categorisation schemes (extend to 5-7 for tH/ttH had/lep).
+extra_cats = (
+  "tH_lep_5", "tH_lep_6", "tH_lep_7",
+  "ttH_lep_6", "ttH_lep_7",
+  "tH_had_5", "tH_had_6", "tH_had_7",
+  "ttH_had_5", "ttH_had_6", "ttH_had_7",
+)
+for cat in extra_cats:
+  globalReplacementMap["tth_th_analysis"]["procRVMap"][cat] = "tth_incl"
+  globalReplacementMap["tth_th_analysis"]["catRVMap"][cat] = cat
+
 # Fiducial setup: use tth_in replacements (no incl/out in fiducial workspaces)
 globalReplacementMap["tth_th_analysis_fiducial"] = od()
 globalReplacementMap["tth_th_analysis_fiducial"]["procWV"] = "tth_in"
@@ -345,6 +356,15 @@ globalReplacementMap["tth_th_analysis_fiducial"]["procRVMap"] = od(
 )
 globalReplacementMap["tth_th_analysis_fiducial"]["catRVMap"] = od(
     globalReplacementMap["tth_th_analysis"]["catRVMap"]
+)
+globalReplacementMap["tth_th_analysis_fiducial_SM_rates"] = od(
+    globalReplacementMap["tth_th_analysis_fiducial"]
+)
+globalReplacementMap["tth_th_analysis_fiducial_noDeco"] = od(
+    globalReplacementMap["tth_th_analysis_fiducial"]
+)
+globalReplacementMap["tth_th_analysis_fiducial_noDeco_SM_rates"] = od(
+    globalReplacementMap["tth_th_analysis_fiducial_SM_rates"]
 )
 
 ###################################################################################################################################################################################################

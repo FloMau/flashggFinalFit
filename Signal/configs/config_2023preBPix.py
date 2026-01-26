@@ -2,13 +2,13 @@
 signalScriptCfg = {
 
   # Setup
-  'inputWSDir':'/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation/outputForFinalFits_13Dec2025_noDeco/workspaces/2023postBPix/ws_signal', # dir storing flashgg workspaces
+  'inputWSDir':'/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation/outputForFinalFits_17Dec2025_withPenalty/workspaces/2023preBPix/ws_signal', # dir storing flashgg workspaces
   'procs':'auto', # if auto: inferred automatically from filenames (requires names to be of from *pythia8_{PROC}.root)
   'cats':'auto', # if auto: inferred automatically from (0) workspace
   #'ext':'earlyAnalysis_freeze_include', # output directory extension
-  'ext':'tth_th_analysis_noDeco_2023postBPix', # output directory extension
+  'ext':'tth_th_analysis_2023preBPix', # output directory extension
   'analysis':'tth_th_analysis', # To specify replacement dataset and XS*BR mapping (defined in ./tools/replacementMap.py and ./tools/XSBRMap.py respectively)
-  'year':'2023postBPix', # Use 'combined' if merging all years: not recommended
+  'year':'2023preBPix', # Use 'combined' if merging all years: not recommended
   'massPoints':'125', # You can now run with a single mass point if necessary
 
   #Photon shape systematics  
@@ -22,5 +22,5 @@ signalScriptCfg = {
   # Job submission options
   'batch':'condor', # ['condor_lxplus','condor','SGE','IC','local']
   'queue':'microcentury', # use hep.q for IC
-  'jobOpts':'request_memory = 8000'
+  'jobOpts':'request_memory = 24000'
 }

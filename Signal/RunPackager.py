@@ -15,6 +15,7 @@ def get_options():
   parser.add_option("--inputWSDir", dest='inputWSDir', default='', help="Input flashgg WS directory: used for auto option")
   parser.add_option('--exts', dest='exts', default='', help="Comma separated lists of exts to merge")
   parser.add_option('--outputExt', dest='outputExt', default='packaged', help="Output extension")
+  parser.add_option('--outputDir', dest='outputDir', default='', help="Write packaged outputs under this directory")
   parser.add_option("--massPoints", dest='massPoints', default='120,125,130', help="Comma separated list of mass points")
   parser.add_option('--mergeYears', dest='mergeYears', default=False, action="store_true", help="Use if merging categories across years")
   parser.add_option('--year', dest='year', default='2022preEE', help="If not merging then add year tag to file name")
@@ -40,6 +41,7 @@ options['mode'] = 'packageSignal'
 options['modeOpts'] = '--exts %s'%opt.exts
 if opt.mergeYears:  options['modeOpts'] += ' --mergeYears'
 else: options['modeOpts'] += ' --year %s'%opt.year
+if opt.outputDir: options['modeOpts'] += ' --outputDir %s'%opt.outputDir
 options['batch'] = opt.batch
 options['queue'] = opt.queue
 options['jobOpts'] = opt.jobOpts
