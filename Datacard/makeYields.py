@@ -26,6 +26,7 @@ def get_options():
   parser = OptionParser()
   parser.add_option('--inputWSDirMap', dest='inputWSDirMap', default='2016:/vols/cms/jl2117/hgg/ws/UL/Sept20/MC_final/signal_2016', help="Map. Format: year=inputWSDir (separate years by comma)")
   parser.add_option("--outputDir", dest='outputDir', default='.', help="Output directory")
+  parser.add_option("--outputYieldsDir", dest='outputYieldsDir', default='', help="Write yields directly under this directory (overrides outputDir/Datacards layout)")
   parser.add_option('--cat', dest='cat', default='', help='Analysis category')
   parser.add_option('--variable', dest='variable', default='', help='Considered variable for the addition of variable specific systematics (e.g. JEC, JES, etc.).')
   parser.add_option('--procs', dest='procs', default='auto', help='Comma separated list of signal processes. auto = automatically inferred from input workspaces')
@@ -293,11 +294,17 @@ for ir,r in data[data['type']=='sig'].iterrows():
 # SAVE YIELDS DATAFRAME
 print(" ..........................................................................................")
 extStr = "_%s"%opt.ext if opt.ext != '' else ''
-if opt.outputDir == '.':
+if opt.outputYieldsDir:
+  output_dir = os.path.join(opt.outputYieldsDir, "yields%s" % extStr)
+  if not os.path.isdir(output_dir): os.makedirs(output_dir, exist_ok=True)
+  print(" --> Saving yields dataframe: %s/%s.pkl"%(output_dir,opt.cat))
+  with open("%s/%s.pkl"%(output_dir,opt.cat),"wb") as fD: pickle.dump(data,fD)
+elif opt.outputDir == '.':
   print(" --> Saving yields dataframe: ./yields%s/%s.pkl"%(extStr,opt.cat))
   if not os.path.isdir("./yields%s"%extStr): os.system("mkdir ./yields%s"%extStr)
   with open("./yields%s/%s.pkl"%(extStr,opt.cat),"wb") as fD: pickle.dump(data,fD)
 else:
-  print(" --> Saving yields dataframe: %s/Datacards/yields%s/%s.pkl"%(opt.outputDir,extStr,opt.cat))
-  if not os.path.isdir("%s/Datacards/yields%s"%(opt.outputDir,extStr)): os.system("mkdir %s/Datacards/yields%s"%(opt.outputDir,extStr))
-  with open("%s/Datacards/yields%s/%s.pkl"%(opt.outputDir,extStr,opt.cat),"wb") as fD: pickle.dump(data,fD)
+  output_dir = os.path.join(opt.outputDir, "Datacards", "yields%s" % extStr)
+  if not os.path.isdir(output_dir): os.makedirs(output_dir, exist_ok=True)
+  print(" --> Saving yields dataframe: %s/%s.pkl"%(output_dir,opt.cat))
+  with open("%s/%s.pkl"%(output_dir,opt.cat),"wb") as fD: pickle.dump(data,fD)

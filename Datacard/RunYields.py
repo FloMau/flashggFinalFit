@@ -17,6 +17,7 @@ def get_options():
   parser.add_option('--procs', dest='procs', default='auto', help='Comma separated list of signal processes. auto = automatically inferred from input workspaces')
   parser.add_option('--ext', dest='ext', default='test', help='Extension for saving')
   parser.add_option('--mass', dest='mass', default='125', help='Input workspace mass')
+  parser.add_option('--outputYieldsDir', dest='outputYieldsDir', default='', help="Write yields directly under this directory (overrides default Datacard/yields layout)")
   parser.add_option('--variable', dest='variable', default='', help='Considered variable (if any). Necessary to account for the proper systematic uncertainties.')
   parser.add_option('--mergeYears', dest='mergeYears', default=False, action="store_true", help="Merge category across years")
   parser.add_option('--skipBkg', dest='skipBkg', default=False, action="store_true", help="Only add signal processes to datacard")
@@ -55,6 +56,7 @@ options['inputWSDirMap'] = opt.inputWSDirMap
 options['procs'] = opt.procs
 options['ext'] = opt.ext
 options['mass'] = opt.mass
+options['outputYieldsDir'] = opt.outputYieldsDir
 options['sigModelWSDir'] = opt.sigModelWSDir
 options['sigModelExt'] = opt.sigModelExt
 options['bkgModelWSDir'] = opt.bkgModelWSDir
@@ -90,7 +92,9 @@ print(" --> Running yields for following cats: %s"%options['cats'])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Make directory to store job scripts and output
-if not os.path.isdir("%s/yields_%s"%(dwd__,options['ext'])): os.system("mkdir %s/yields_%s"%(dwd__,options['ext']))
+yields_base_dir = options['outputYieldsDir'] if options['outputYieldsDir'] else dwd__
+if not os.path.isdir("%s/yields_%s"%(yields_base_dir,options['ext'])):
+  os.makedirs("%s/yields_%s"%(yields_base_dir,options['ext']), exist_ok=True)
 
 # Write submission files: style depends on batch system
 writeSubFiles(options)

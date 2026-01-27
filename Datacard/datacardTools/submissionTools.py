@@ -7,6 +7,9 @@ def run(cmd):
   print("%s\n\n"%cmd)
   os.system(cmd)
 
+def yields_base_dir(_opts):
+  return _opts.get('outputYieldsDir') or dwd__
+
 def writePreamble(_file):
   _file.write("#!/bin/bash\n")
   _file.write("ulimit -s unlimited\n")
@@ -40,13 +43,18 @@ def writeCondorSub(_file,_exec,_queue,_nJobs,_jobOpts,doHoldOnFailure=True,doPer
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def writeSubFiles(_opts):
   # Make directory to store sub files
-  if not os.path.isdir("%s/yields_%s"%(dwd__,_opts['ext'])): os.system("mkdir %s/yields_%s"%(dwd__,_opts['ext']))
-  if not os.path.isdir("%s/yields_%s/jobs"%(dwd__,_opts['ext'])): os.system("mkdir %s/yields_%s/jobs"%(dwd__,_opts['ext']))
+  yields_base = yields_base_dir(_opts)
+  if not os.path.isdir("%s/yields_%s"%(yields_base,_opts['ext'])): os.system("mkdir %s/yields_%s"%(yields_base,_opts['ext']))
+  if not os.path.isdir("%s/yields_%s/jobs"%(yields_base,_opts['ext'])): os.system("mkdir %s/yields_%s/jobs"%(yields_base,_opts['ext']))
 
-  _jobdir = "%s/yields_%s/jobs"%(dwd__,_opts['ext'])
+  _jobdir = "%s/yields_%s/jobs"%(yields_base,_opts['ext'])
   # Remove current job files
   if len(glob.glob("%s/*"%_jobdir)): os.system("rm %s/*"%_jobdir)
-  
+
+  output_dir_flag = ""
+  if _opts.get('outputYieldsDir'):
+    output_dir_flag = " --outputYieldsDir %s"%_opts['outputYieldsDir']
+
   # CONDOR
   if "condor" in _opts['batch']:
     _executable = "condor_yields_%s"%_opts['ext']
@@ -58,9 +66,9 @@ def writeSubFiles(_opts):
       c = _opts['cats'].split(",")[cidx]
       _f.write("if [ $1 -eq %g ]; then\n"%cidx)
       if _opts['variable'] == '':
-        _f.write("  python3 %s/makeYields.py --cat %s --procs %s --ext %s --mass %s --inputWSDirMap %s %s\n"%(dwd__,c,_opts['procs'],_opts['ext'],_opts['mass'],_opts['inputWSDirMap'],_opts['modeOpts']))
+        _f.write("  python3 %s/makeYields.py --cat %s --procs %s --ext %s --mass %s --inputWSDirMap %s%s %s\n"%(dwd__,c,_opts['procs'],_opts['ext'],_opts['mass'],_opts['inputWSDirMap'],output_dir_flag,_opts['modeOpts']))
       else:  
-        _f.write("  python3 %s/makeYields.py --cat %s --procs %s --ext %s --mass %s --inputWSDirMap %s --variable %s %s\n"%(dwd__,c,_opts['procs'],_opts['ext'],_opts['mass'],_opts['inputWSDirMap'],_opts['variable'], _opts['modeOpts']))
+        _f.write("  python3 %s/makeYields.py --cat %s --procs %s --ext %s --mass %s --inputWSDirMap %s --variable %s%s %s\n"%(dwd__,c,_opts['procs'],_opts['ext'],_opts['mass'],_opts['inputWSDirMap'],_opts['variable'],output_dir_flag,_opts['modeOpts']))
       _f.write("fi\n")
       
     # Close .sh file
@@ -81,16 +89,17 @@ def writeSubFiles(_opts):
       _f = open("%s/%s_%s.sh"%(_jobdir,_executable,c),"w")
       writePreamble(_f)
       if _opts['variable'] == '':
-        _f.write("python3 %s/makeYields.py --cat %s --procs %s --ext %s --mass %s --inputWSDirMap %s --sigModelWSDir %s --sigModelExt %s --bkgModelWSDir %s --bkgModelExt %s %s\n"%(dwd__,c,_opts['procs'],_opts['ext'],_opts['mass'],_opts['inputWSDirMap'],_opts  ['sigModelWSDir'],_opts['sigModelExt'],_opts['bkgModelWSDir'],_opts['bkgModelExt'],_opts['modeOpts']))
+        _f.write("python3 %s/makeYields.py --cat %s --procs %s --ext %s --mass %s --inputWSDirMap %s --sigModelWSDir %s --sigModelExt %s --bkgModelWSDir %s --bkgModelExt %s%s %s\n"%(dwd__,c,_opts['procs'],_opts['ext'],_opts['mass'],_opts['inputWSDirMap'],_opts  ['sigModelWSDir'],_opts['sigModelExt'],_opts['bkgModelWSDir'],_opts['bkgModelExt'],output_dir_flag,_opts['modeOpts']))
       else:
-        _f.write("python3 %s/makeYields.py --cat %s --procs %s --ext %s --mass %s --inputWSDirMap %s --sigModelWSDir %s --sigModelExt %s --bkgModelWSDir %s --bkgModelExt %s --variable %s %s\n"%(dwd__,c,_opts['procs'],_opts['ext'],_opts['mass'],_opts['inputWSDirMap'],_opts['sigModelWSDir'],_opts['sigModelExt'],_opts['bkgModelWSDir'],_opts['bkgModelExt'],_opts['variable'],_opts['modeOpts']))
+        _f.write("python3 %s/makeYields.py --cat %s --procs %s --ext %s --mass %s --inputWSDirMap %s --sigModelWSDir %s --sigModelExt %s --bkgModelWSDir %s --bkgModelExt %s --variable %s%s %s\n"%(dwd__,c,_opts['procs'],_opts['ext'],_opts['mass'],_opts['inputWSDirMap'],_opts['sigModelWSDir'],_opts['sigModelExt'],_opts['bkgModelWSDir'],_opts['bkgModelExt'],_opts['variable'],output_dir_flag,_opts['modeOpts']))
       _f.close()
       os.system("chmod 775 %s/%s_%s.sh"%(_jobdir,_executable,c))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Function for submitting files to batch system
 def submitFiles(_opts):
-  _jobdir = "%s/yields_%s/jobs"%(dwd__,_opts['ext'])
+  yields_base = yields_base_dir(_opts)
+  _jobdir = "%s/yields_%s/jobs"%(yields_base,_opts['ext'])
   # CONDOR
   if "condor" in _opts['batch']:
     _executable = "condor_yields_%s"%_opts['ext']
