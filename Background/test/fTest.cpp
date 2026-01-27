@@ -37,6 +37,7 @@
 
 #include "RooCategory.h"
 #include "HiggsAnalysis/CombinedLimit/interface/RooMultiPdf.h"
+#include "HiggsAnalysis/CombinedLimit/interface/RooBernsteinFast.h"
 
 #include "../interface/PdfModelBuilder.h"
 #include <Math/PdfFuncMathCore.h>
@@ -109,6 +110,16 @@ double computeSidebandScaledYield(RooAbsPdf *pdf, RooRealVar *mass, double sideb
     std::cerr << "[ERROR] computeSidebandScaledYield: pdf or mass is null. Returning uncorrected sidebandYield (" << sidebandYield << ")." << std::endl;
     return sidebandYield;
   }
+  const bool isBernsteinFast =
+      pdf->IsA()->InheritsFrom(RooBernsteinFast<1>::Class()) ||
+      pdf->IsA()->InheritsFrom(RooBernsteinFast<2>::Class()) ||
+      pdf->IsA()->InheritsFrom(RooBernsteinFast<3>::Class()) ||
+      pdf->IsA()->InheritsFrom(RooBernsteinFast<4>::Class()) ||
+      pdf->IsA()->InheritsFrom(RooBernsteinFast<5>::Class());
+  if (isBernsteinFast) {
+    // Numeric integration avoids NaNs in analytic normalization for BernsteinFast.
+    pdf->forceNumInt(true);
+  }
   RooArgSet observables(*mass);
   std::unique_ptr<RooAbsReal> sidebandIntegral(
     pdf->createIntegral(observables, RooFit::NormSet(observables), RooFit::Range(MASS_FIT_RANGE)));
@@ -118,6 +129,12 @@ double computeSidebandScaledYield(RooAbsPdf *pdf, RooRealVar *mass, double sideb
   const double pdfSidebandFrac = sidebandIntegral ? sidebandIntegral->getVal() : 0.;
   double pdfFullFrac = fullIntegral ? fullIntegral->getVal() : 0.;
 
+  if (!std::isfinite(pdfSidebandFrac) || !std::isfinite(pdfFullFrac)) {
+    std::cerr << "[WARN] computeSidebandScaledYield: non-finite integral (sideband=" << pdfSidebandFrac
+              << ", full=" << pdfFullFrac << "). Returning uncorrected sidebandYield (" << sidebandYield
+              << ")." << std::endl;
+    return sidebandYield;
+  }
   if (pdfSidebandFrac <= 0.) {
     return sidebandYield;
   }
