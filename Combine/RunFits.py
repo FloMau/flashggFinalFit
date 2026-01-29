@@ -23,6 +23,8 @@ def get_options():
   parser.add_option('--mass', dest='mass', default='125.38', help="Higgs mass")
   parser.add_option('--queue', dest='queue', default='workday', help='Queue e.g. for condor=workday, for IC=hep.q')
   parser.add_option('--subOpts', dest='subOpts', default="", help="Submission options")
+  parser.add_option('--datacardDir', dest='datacardDir', default="", help="Directory containing Datacard_*.root (overrides default Combine dir)")
+  parser.add_option('--nameSuffix', dest='nameSuffix', default='', help="Suffix for task/output names (e.g. _fine)")
   parser.add_option('--doCustomCrab', dest='doCustomCrab', default=False, action="store_true", help="Load crab options from custom_crab.py file")
   parser.add_option('--crabMemory', dest='crabMemory', default='5900', help="Memory for crab job")
   parser.add_option('--dryRun', dest='dryRun', action="store_true", default=False, help="Only create submission files")
@@ -43,6 +45,11 @@ def getPdfIndicesFromJson(pdfjson):
   with open(pdfjson) as jsonfile: pdfidxs = json.load(jsonfile)
   for k,v in pdfidxs.items(): pdfStr += "%s=%s,"%(k,v)
   return pdfStr[:-1]
+
+def getPdfFreezeFromJson(pdfjson):
+  with open(pdfjson) as jsonfile:
+    pdfidxs = json.load(jsonfile)
+  return ",".join(pdfidxs.keys())
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Options:
@@ -113,29 +120,61 @@ for fidx in range(len(fits)):
 
   # Dry run
   if opt.dryRun: _fit_opts += " --dry-run"
-  _name = "%s_%s"%(_fit.split(":")[0],_fit.split(":")[1])
+  name_suffix = opt.nameSuffix.strip()
+  if name_suffix and not name_suffix.startswith("_"):
+    name_suffix = "_%s" % name_suffix
+  _name = "%s_%s%s"%(_fit.split(":")[0],_fit.split(":")[1],name_suffix)
 
   # Setting PDF indices
   if opt.doObserved: 
     _name += "_obs"
-    pdf_opts = getPdfIndicesFromJson("pdfindex%s_observed.json"%opt.ext) if opt.setPdfIndices else ''
-  else: pdf_opts = getPdfIndicesFromJson("pdfindex%s.json"%opt.ext) if opt.setPdfIndices else ''
+    if opt.setPdfIndices:
+      pdf_opts = getPdfIndicesFromJson("pdfindex%s_observed.json"%opt.ext)
+      pdf_freeze = getPdfFreezeFromJson("pdfindex%s_observed.json"%opt.ext)
+    else:
+      pdf_opts = ''
+      pdf_freeze = ''
+  else:
+    if opt.setPdfIndices:
+      pdf_opts = getPdfIndicesFromJson("pdfindex%s.json"%opt.ext)
+      pdf_freeze = getPdfFreezeFromJson("pdfindex%s.json"%opt.ext)
+    else:
+      pdf_opts = ''
+      pdf_freeze = ''
 
   # File to load workspace
   if opt.snapshotWSFile != '': d_opts = '-d %s --snapshotName MultiDimFit'%opt.snapshotWSFile
   else:
+    if opt.datacardDir != "":
+      datacard_dir = os.path.abspath(opt.datacardDir)
+    else:
+      datacard_dir = os.path.join(os.environ['CMSSW_BASE'], "src", "flashggFinalFit", "Combine")
     # If an extension is provided, text2workspace writes Datacard_<ext>.root
     if opt.ext != '':
       clean_ext = opt.ext.lstrip('_')
-      d_opts = '-d %s/src/flashggFinalFit/Combine/Datacard_%s.root'%(os.environ['CMSSW_BASE'],clean_ext)
+      d_opts = '-d %s/Datacard_%s.root'%(datacard_dir,clean_ext)
     else:
-      d_opts = '-d %s/src/flashggFinalFit/Combine/Datacard%s_%s.root'%(os.environ['CMSSW_BASE'],opt.ext,opt.mode)
+      d_opts = '-d %s/Datacard%s_%s.root'%(datacard_dir,opt.ext,opt.mode)
 
   # If setParameters already in _fit_opts then add to fit opts and set pdfOpts = ''
   if( "setParameters" in _fit_opts )&( pdf_opts != '' ):
     pdfstr = re.sub("--setParameters ","",pdf_opts)
     _fit_opts = re.sub("--setParameters ","--setParameters %s,"%pdfstr,_fit_opts)
     pdf_opts = ''
+  if pdf_freeze == '' and pdf_opts != '':
+    pdf_freeze = ",".join([
+      kv.split("=")[0]
+      for kv in re.sub("--setParameters\\s+","",pdf_opts).split(",")
+      if "=" in kv
+    ])
+  if pdf_freeze != '':
+    existing_freeze = []
+    m = re.search(r"--freezeParameters\s+([^\s]+)", _fit_opts)
+    if m:
+      existing_freeze = [p for p in m.group(1).split(",") if p]
+      _fit_opts = re.sub(r"--freezeParameters\s+[^\s]+", "", _fit_opts, count=1).strip()
+    merged_freeze = list(dict.fromkeys(existing_freeze + [p for p in pdf_freeze.split(",") if p]))
+    _fit_opts = ("%s --freezeParameters %s" % (_fit_opts.strip(), ",".join(merged_freeze))).strip()
 
   # Running different types of fits...
 
