@@ -103,6 +103,20 @@ void runFit(RooAbsPdf *pdf, RooDataSet *data, double *NLL, int *stat_t, int MaxT
 	*NLL = minnll;
 }
 
+bool hasFiniteParams(RooAbsPdf *pdf, RooDataSet *data){
+  if (!pdf || !data) return false;
+  std::unique_ptr<RooArgSet> params(pdf->getParameters(*data));
+  if (!params) return false;
+  std::unique_ptr<TIterator> it(params->createIterator());
+  while (TObject *obj = it->Next()){
+    RooRealVar *var = dynamic_cast<RooRealVar*>(obj);
+    if (!var) continue;
+    const double v = var->getVal();
+    if (!std::isfinite(v)) return false;
+  }
+  return true;
+}
+
 // Needed to scale the sideband yield to the full range yield
 // It is a C++ implementation of Jon's code -> https://github.com/jonathon-langford/flashggFinalFit/blob/dev_lowmass/Background/tools/modelBuilder_v2.py#L266-L306 
 double computeSidebandScaledYield(RooAbsPdf *pdf, RooRealVar *mass, double sidebandYield){
@@ -289,6 +303,11 @@ double getGoodnessOfFit(RooRealVar *mass, RooAbsPdf *mpdf, RooDataSet *data, std
 
   RooExtendPdf *pdf = new RooExtendPdf("ext","ext",*mpdf,norm);
   const double sidebandEntries = data->sumEntries();
+  if (!hasFiniteParams(pdf, data)) {
+    std::cout << "[WARNING] GOF skipped: non-finite parameters for pdf " << pdf->GetName() << std::endl;
+    delete pdf;
+    return 0.0;
+  }
 
   // get The Chi2 value from the data
   RooPlot *plot_chi2 = mass->frame();
@@ -379,10 +398,15 @@ void plot(RooRealVar *mass, RooAbsPdf *pdf, RooDataSet *data, string name,vector
   int np = pdf->getParameters(*data)->getSize()+1; //Because this pdf has no extend
   double chi2 = plot_chi2->chiSquare(np);
  
-  *prob = getGoodnessOfFit(mass,pdf,data,name);
+  if (status!=0 || !hasFiniteParams(pdf, data)) {
+    std::cout << "[WARNING] Skipping GOF for " << pdf->GetName() << " (fit status " << status << " or non-finite params)" << std::endl;
+    *prob = 0.0;
+  } else {
+    *prob = getGoodnessOfFit(mass,pdf,data,name);
+  }
   RooPlot *plot = mass->frame();
-  mass->setRange("unblindReg_1",mgg_low,blind_low);
-  mass->setRange("unblindReg_2",blind_high,mgg_high);
+  mass->setRange("unblindReg_1",mgg_low,120);
+  mass->setRange("unblindReg_2",130,mgg_high);
   if (BLIND) {
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_1"));
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_2"));
@@ -422,8 +446,8 @@ void plot(RooRealVar *mass, RooMultiPdf *pdfs, RooCategory *catIndex, RooDataSet
   leg->SetLineColor(1);
   RooPlot *plot = mass->frame();
 
-  mass->setRange("unblindReg_1",mgg_low,blind_low);
-  mass->setRange("unblindReg_2",blind_high,mgg_high);
+  mass->setRange("unblindReg_1",mgg_low,120);
+  mass->setRange("unblindReg_2",130,mgg_high);
   if (BLIND) {
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_1"));
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_2"));
@@ -581,8 +605,8 @@ void plot(RooRealVar *mass, map<string,RooAbsPdf*> pdfs, RooDataSet *data, strin
   leg->SetLineColor(0);
   RooPlot *plot = mass->frame();
 
-  mass->setRange("unblindReg_1",mgg_low,blind_low);
-  mass->setRange("unblindReg_2",blind_high,mgg_high);
+  mass->setRange("unblindReg_1",mgg_low,120);
+  mass->setRange("unblindReg_2",130,mgg_high);
   if (BLIND) {
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_1"));
     data->plotOn(plot,Binning(mgg_high-mgg_low),CutRange("unblindReg_2"));
@@ -713,8 +737,8 @@ int main(int argc, char* argv[]){
  
   setTDRStyle();
   writeExtraText = true;       // if extra text
-  extraText  = "Private Work"; // custom label
-  lumi_13p6TeV = "62.4 fb^{-1}";
+  extraText  = "Preliminary";  // default extra text is "Preliminary"
+  lumi_13p6TeV = "61.9 fb^{-1}";
   lumi_8TeV  = "19.1 fb^{-1}"; // default is "19.7 fb^{-1}"
   lumi_7TeV  = "4.9 fb^{-1}";  // default is "5.1 fb^{-1}"
   lumi_sqrtS = "13 TeV";       // used with iPeriod = 0, e.g. for simulation-only plots (default is an empty string)
