@@ -32,6 +32,7 @@ def get_options():
   parser.add_option("--outputDir", dest='outputDir', default=swd__, help="Output directory")
   parser.add_option("--ext", dest='ext', default='', help="Extension")
   parser.add_option("--procs", dest='procs', default='', help="Signal processes")
+  parser.add_option("--chunkLabel", dest='chunkLabel', default='', help="Optional chunk label. If set, write chunked JSON output.")
   parser.add_option("--nProcsToFTest", dest='nProcsToFTest', default=-1, type='int',help="Number of signal processes to fTest (ordered by sum entries), others are set to nRV=1,nWV=1. Set to -1 to run over all")
   parser.add_option("--cat", dest='cat', default='', help="RECO category")
   parser.add_option('--mass', dest='mass', default='125', help="Mass point to fit")
@@ -160,7 +161,11 @@ for pidx, proc in enumerate(procsToFTest):
 
 # Make output
 if not os.path.isdir("%s/outdir_%s/fTest/json"%(opt.outputDir,opt.ext)): os.system("mkdir %s/outdir_%s/fTest/json"%(opt.outputDir,opt.ext))
-ff = open("%s/outdir_%s/fTest/json/nGauss_%s.json"%(opt.outputDir,opt.ext,opt.cat),"w")
+if opt.chunkLabel:
+  out_json = "%s/outdir_%s/fTest/json/nGauss_%s__%s.json"%(opt.outputDir,opt.ext,opt.cat,opt.chunkLabel)
+else:
+  out_json = "%s/outdir_%s/fTest/json/nGauss_%s.json"%(opt.outputDir,opt.ext,opt.cat)
+ff = open(out_json,"w")
 ff.write("{\n")
 # Iterate over rows in dataframe: sorted by sumEntries
 pitr = 1

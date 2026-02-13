@@ -22,5 +22,5 @@ signalScriptCfg = {
   # Job submission options
   'batch':'condor', # ['condor_lxplus','condor','SGE','IC','local']
   'queue':'microcentury', # use hep.q for IC
-  'jobOpts':'request_memory = 24000'
+  'jobOpts':'request_memory = 12000'
 }

@@ -14,10 +14,11 @@ def get_options():
   parser = OptionParser()
   # Take inputs from config file
   parser.add_option('--inputConfig', dest='inputConfig', default='', help="Name of input config file (if specified will ignore other options)")
-  parser.add_option('--mode', dest='mode', default='', help="Which script to run. Options: ['fTest','getDiagProc','calcPhotonSyst','signalFit','packageOnly','sigPlotsOnly']")
+  parser.add_option('--mode', dest='mode', default='', help="Which script to run. Options: ['fTest','mergeFTest','getDiagProc','calcPhotonSyst','signalFit','packageOnly','sigPlotsOnly']")
   parser.add_option('--modeOpts', dest='modeOpts', default='', help="Additional options to add to command line when running scripts (specify all within quotes e.g. \"--XYZ ABC\")")
   parser.add_option('--jobOpts', dest='jobOpts', default='', help="Additional options to add to job submission. For Condor separate individual options with a colon (specify all within quotes e.g. \"option_xyz = abc+option_123 = 456\")")
   parser.add_option('--groupSignalFitJobsByCat', dest='groupSignalFitJobsByCat', default=False, action="store_true", help="Option to group signalFit jobs by category")
+  parser.add_option('--procChunks', dest='procChunks', default=1, type='int', help="Split process list into N chunks for fTest and grouped signalFit jobs (default: 1)")
   parser.add_option('--printOnly', dest='printOnly', default=False, action="store_true", help="Dry run: print submission files only")
   return parser.parse_args()
 (opt,args) = get_options()
@@ -59,6 +60,7 @@ if opt.inputConfig != '':
     if opt.jobOpts:
       options['jobOpts'] = opt.jobOpts
     options['groupSignalFitJobsByCat'] = opt.groupSignalFitJobsByCat
+    options['procChunks']              = max(1, int(opt.procChunks))
     options['printOnly']               = opt.printOnly
 
     print("Chosen options:", options)
@@ -78,8 +80,8 @@ else:
 # Check all processes and mass points exist
 
 # Check if mode in allowed options
-if options['mode'] not in ['fTest','getDiagProc','calcPhotonSyst','signalFit']:
-  print(" --> [ERROR] mode %s not allowed. Please use one of the following: ['fTest','getDiagProc','calcPhotonSyst','signalFit']. Leaving..."%options['mode'])
+if options['mode'] not in ['fTest','mergeFTest','getDiagProc','calcPhotonSyst','signalFit']:
+  print(" --> [ERROR] mode %s not allowed. Please use one of the following: ['fTest','mergeFTest','getDiagProc','calcPhotonSyst','signalFit']. Leaving..."%options['mode'])
   leave()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -133,6 +135,7 @@ if options['printOnly']:
   print(" --> PRINT ONLY (no submission)")
   print("")
 if options['mode'] == "fTest": print(" --> Running signal fit fTest (determine number of gaussians for proc x cat x vertex scenario)...")
+elif options['mode'] == "mergeFTest": print(" --> Merging chunked signal fit fTest JSON outputs...")
 elif options['mode'] == "getDiagProc": print(" --> Getting diagonal process for each analysis category...")
 elif options['mode'] == "calcPhotonSyst": print(" --> Calculating photon shape systematics...")
 elif options['mode'] == "signalFit": print(" --> Performing signal fit...")
@@ -143,15 +146,23 @@ print(" ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 # Make directory to store job scripts and output
 if not os.path.isdir("%s/outdir_%s"%(swd__,options['ext'])): os.system("mkdir %s/outdir_%s"%(swd__,options['ext']))
 
-# Write submission files: style depends on batch system
-writeSubFiles(options)
-print("  --> Finished writing submission scripts")
-
-# Submit scripts to batch system
-if not options['printOnly']: 
-  submitFiles(options)
+if options['mode'] == "mergeFTest":
+  cmd = "python3 %s/scripts/mergeFTestChunks.py --outputDir %s --ext %s --cats %s --procs %s %s"%(swd__,swd__,options['ext'],options['cats'],options['procs'],options['modeOpts'])
+  print(cmd)
+  if not options['printOnly']:
+    os.system(cmd)
+  else:
+    print("  --> Running with printOnly option. Will not execute merge command")
 else:
-  print("  --> Running with printOnly option. Will not submit scripts")
+  # Write submission files: style depends on batch system
+  writeSubFiles(options)
+  print("  --> Finished writing submission scripts")
+
+  # Submit scripts to batch system
+  if not options['printOnly']: 
+    submitFiles(options)
+  else:
+    print("  --> Running with printOnly option. Will not submit scripts")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 leave()

@@ -9,6 +9,7 @@ SETUP="fid"
 USE_NODECO=0
 MODES=()
 CLEAN_COPY=0
+PROC_CHUNKS=1
 
 usage() {
   cat <<'USAGE'
@@ -19,12 +20,14 @@ Options:
   --noDeco                     Use noDeco configs
   --config-dir <path>          Override config dir (default: ./configs)
   --mode <name[,name...]>      Run one or more modes:
-                                f-test | signal-fit | copy-ws | packaging | plotting
+                                f-test | f-test-merge | signal-fit | copy-ws | packaging | plotting
   --clean-copy                 Remove merged workspace dir before copy-ws
+  --proc-chunks <N>            Split process list into N chunks for f-test/signal-fit jobs
   -h, --help                   Show help
 
 Examples:
   bash runSignalStuff.sh --setup fid --mode f-test
+  bash runSignalStuff.sh --setup fid --mode f-test-merge
   bash runSignalStuff.sh --setup fid --mode signal-fit
   bash runSignalStuff.sh --setup fid --mode copy-ws,packaging
   bash runSignalStuff.sh --setup fid --mode plotting
@@ -65,6 +68,10 @@ while [[ $# -gt 0 ]]; do
       CLEAN_COPY=1
       shift 1
       ;;
+    --proc-chunks)
+      PROC_CHUNKS="$2"
+      shift 2
+      ;;
     -h|--help)
       usage
       exit 0
@@ -97,9 +104,9 @@ eras=(2022preEE 2022postEE 2023preBPix 2023postBPix)
 # base workspace directory
 global_ws_root=/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation
 BASE_WS_INCL="${global_ws_root}/outputForFinalFits_17Dec2025_withPenalty/workspaces"
-BASE_WS_FID="${global_ws_root}/outputForFinalFits_14Jan2026_CP_penalty_10/workspaces_fiducial"
+BASE_WS_FID="${global_ws_root}/outputForFinalFits_24Jan2026_CP_penalty_30/workspaces_fiducial"
 BASE_WS_INCL_NODECO="${global_ws_root}/outputForFinalFits_16Jan2026_noDeco/workspaces"
-BASE_WS_FID_NODECO="${global_ws_root}/outputForFinalFits_16Jan2026_noDeco/workspaces_fiducial"
+BASE_WS_FID_NODECO="${global_ws_root}/outputForFinalFits_06Feb2026_noDeco/workspaces_fiducial"
 BASE_WS="$BASE_WS_FID"
 if [[ "$SETUP" == "incl" ]]; then
   BASE_WS="$BASE_WS_INCL"
@@ -163,7 +170,23 @@ run_f_test() {
     python3 RunSignalScripts.py \
       --inputConfig "$cfg" \
       --mode fTest \
+      --procChunks "${PROC_CHUNKS}" \
       --modeOpts "--doPlots --skipWV"
+  done
+}
+
+run_f_test_merge() {
+  for era in "${eras[@]}"; do
+    local cfg
+    cfg="$(config_path_for_era "$era")"
+    if [[ ! -f "$cfg" ]]; then
+      echo "[ERROR] Config not found: $cfg" >&2
+      exit 1
+    fi
+    echo ">>> Merging fTest chunks for era: $era"
+    python3 RunSignalScripts.py \
+      --inputConfig "$cfg" \
+      --mode mergeFTest
   done
 }
 
@@ -180,6 +203,7 @@ run_signal_fit() {
     python3 RunSignalScripts.py \
       --inputConfig "$cfg" \
       --mode signalFit \
+      --procChunks "${PROC_CHUNKS}" \
       --groupSignalFitJobsByCat \
       --modeOpts "--skipVertexScenarioSplit --skipSystematics --doPlots"
   done
@@ -268,6 +292,9 @@ for mode in "${MODES[@]}"; do
   case "$mode" in
     f-test)
       run_f_test
+      ;;
+    f-test-merge)
+      run_f_test_merge
       ;;
     signal-fit)
       run_signal_fit

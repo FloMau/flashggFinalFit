@@ -171,14 +171,16 @@ tth_cpodd_xs = tth_sm_xs * (0.2352 / 0.5582)
 tHq_sm_xs = 0.0832
 tHq_lep_frac = 0.3258
 # Least-squares fit of inclusive tHq cross-section ratios (BSM/SM) from simulation points:
-# (1,0), (0,1), (-1,0), (1/sqrt2,1/sqrt2), (1/sqrt2,-1/sqrt2), (0,-1), (0,0).
+# (1,0)->1.0, (0,1)->0.09406/0.02127, (-1,0)->0.246/0.02127,
+# (1/sqrt2,1/sqrt2)->0.03508/0.02127, (1/sqrt2,-1/sqrt2)->0.03462/0.02127,
+# (0,-1)->0.09523/0.02127, (0,0)->0.07338/0.02127.
 tHq_ratio_coeffs = (
-    4.07666666667,
-    -6.29134546907,
-    -0.0325,
-    3.28635657021,
-    0.0715174963327,
-    1.21107879243,
+    3.4499294781382264,
+    -5.280065742366744,
+    -0.02750352609308848,
+    2.8347914135875216,
+    0.06052256389225552,
+    1.0016931531267788,
 )
 
 
@@ -257,21 +259,21 @@ globalXSBRMap['tth_th_analysis']['tthKt0p000Ktt1p500'] = {'mode':'constant','fac
 globalXSBRMap['tth_th_analysis']['tthKtm1p500Ktt0p000'] = {'mode':'constant','factor':tth_xs(-1.5, 0.0)}
 globalXSBRMap['tth_th_analysis']['tthKt0p000Kttm1p500'] = {'mode':'constant','factor':tth_xs(0.0, -1.5)}
 globalXSBRMap['tth_th_analysis']['tthKt1p061Kttm1p061'] = {'mode':'constant','factor':tth_xs(1.061, -1.061)}
-# tHq: base points directly from simulation, other points interpolated
+# tHq: evaluate all coupling points from the same polynomial ratio model
 globalXSBRMap['tth_th_analysis']['tHqLep'] = {'mode':'constant','factor': tHq_sm_xs * tHq_lep_frac}
 globalXSBRMap['tth_th_analysis']['tHqHad'] = {'mode':'constant','factor': tHq_sm_xs * (1 - tHq_lep_frac)}
-globalXSBRMap['tth_th_analysis']['tHqLepKtm1Ktt0'] = {'mode':'constant','factor': 0.0832 * (0.246 / 0.018) * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHadKtm1Ktt0'] = {'mode':'constant','factor': 0.0832 * (0.246 / 0.018) * (1-0.3258)}
-globalXSBRMap['tth_th_analysis']['tHqLepCPodd'] = {'mode':'constant','factor': 0.0832 * (0.09406 / 0.018) * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHadCPodd'] = {'mode':'constant','factor': 0.0832 * (0.09406 / 0.018) * (1-0.3258)}
-globalXSBRMap['tth_th_analysis']['tHqLepKt0p7Ktt0p7'] = {'mode':'constant','factor': 0.0832 * (0.03508 / 0.018) * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHadKt0p7Ktt0p7'] = {'mode':'constant','factor': 0.0832 * (0.03508 / 0.018) * (1-0.3258)}
-globalXSBRMap['tth_th_analysis']['tHqLepKt0p7Kttm0p7'] = {'mode':'constant','factor': 0.0832 * (0.03462 / 0.018) * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHadKt0p7Kttm0p7'] = {'mode':'constant','factor': 0.0832 * (0.03462 / 0.018) * (1-0.3258)}
-globalXSBRMap['tth_th_analysis']['tHqLepKt0Kttm1'] = {'mode':'constant','factor': 0.0832 * (0.09523 / 0.018) * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHadKt0Kttm1'] = {'mode':'constant','factor': 0.0832 * (0.09523 / 0.018) * (1-0.3258)}
-globalXSBRMap['tth_th_analysis']['tHqLepKt0Ktt0'] = {'mode':'constant','factor': 0.0832 * (0.07338 / 0.018) * 0.3258}
-globalXSBRMap['tth_th_analysis']['tHqHadKt0Ktt0'] = {'mode':'constant','factor': 0.0832 * (0.07338 / 0.018) * (1-0.3258)}
+globalXSBRMap['tth_th_analysis']['tHqLepKtm1Ktt0'] = {'mode':'constant','factor': tHq_lep_xs(-1.0, 0.0)}
+globalXSBRMap['tth_th_analysis']['tHqHadKtm1Ktt0'] = {'mode':'constant','factor': tHq_had_xs(-1.0, 0.0)}
+globalXSBRMap['tth_th_analysis']['tHqLepCPodd'] = {'mode':'constant','factor': tHq_lep_xs(0.0, 1.0)}
+globalXSBRMap['tth_th_analysis']['tHqHadCPodd'] = {'mode':'constant','factor': tHq_had_xs(0.0, 1.0)}
+globalXSBRMap['tth_th_analysis']['tHqLepKt0p7Ktt0p7'] = {'mode':'constant','factor': tHq_lep_xs(kt_diag, kt_diag)}
+globalXSBRMap['tth_th_analysis']['tHqHadKt0p7Ktt0p7'] = {'mode':'constant','factor': tHq_had_xs(kt_diag, kt_diag)}
+globalXSBRMap['tth_th_analysis']['tHqLepKt0p7Kttm0p7'] = {'mode':'constant','factor': tHq_lep_xs(kt_diag, -kt_diag)}
+globalXSBRMap['tth_th_analysis']['tHqHadKt0p7Kttm0p7'] = {'mode':'constant','factor': tHq_had_xs(kt_diag, -kt_diag)}
+globalXSBRMap['tth_th_analysis']['tHqLepKt0Kttm1'] = {'mode':'constant','factor': tHq_lep_xs(0.0, -1.0)}
+globalXSBRMap['tth_th_analysis']['tHqHadKt0Kttm1'] = {'mode':'constant','factor': tHq_had_xs(0.0, -1.0)}
+globalXSBRMap['tth_th_analysis']['tHqLepKt0Ktt0'] = {'mode':'constant','factor': tHq_lep_xs(0.0, 0.0)}
+globalXSBRMap['tth_th_analysis']['tHqHadKt0Ktt0'] = {'mode':'constant','factor': tHq_had_xs(0.0, 0.0)}
 globalXSBRMap['tth_th_analysis']['tHqLepKt0p500Ktt0p000'] = {'mode':'constant','factor': tHq_lep_xs(0.5, 0.0)}
 globalXSBRMap['tth_th_analysis']['tHqHadKt0p500Ktt0p000'] = {'mode':'constant','factor': tHq_had_xs(0.5, 0.0)}
 globalXSBRMap['tth_th_analysis']['tHqLepKt0p354Ktt0p354'] = {'mode':'constant','factor': tHq_lep_xs(0.354, 0.354)}
