@@ -7,287 +7,41 @@ import numpy as np
 import pandas
 import pickle
 from collections import OrderedDict as od
+
+# Ensure commonTools is importable when running standalone.
+_this_dir = os.path.dirname(os.path.abspath(__file__))
+_flashgg_dir = os.path.abspath(os.path.join(_this_dir, "..", ".."))
+_common_tools_dir = os.path.join(_flashgg_dir, "commonTools")
+if _common_tools_dir not in sys.path:
+  sys.path.insert(0, _common_tools_dir)
+
 from commonObjects import *
 from commonTools import *
 
 XSBRMap = od()
-# Tutorial analysis
-XSBRMap['tutorial'] = od()
-XSBRMap['tutorial']['decay'] = {'mode':'hgg'}
-XSBRMap['tutorial']['GG2H'] = {'mode':'constant', 'factor':51.96}
-XSBRMap['tutorial']['VBF'] = {'mode':'constant', 'factor':4.067}
-# For case of fixed xs/br Use 'mode':constant 'factor':X e.g.
-#XSBRMap['example'] = od()
-#XSBRMap['example']['decay'] = {'mode':'constant','factor':1}
-#XSBRMap['example']['PROCNAME'] = {'mode':'constant','factor':0.001}
-# For case of inclusive production mode then drop factor e.g.
-#XSBRMap['example'] = od()
-#XSBRMap['example']['decay'] = {'mode':'hgg'}
-#XSBRMap['example']['GG2H'] = {'mode':'ggH'}
-#XSBRMap['example']['VBF'] = {'mode':'qqH'}
-#XSBRMap['example']['WH2HQQ'] = {'mode':'WH','factor':BR_W_qq}
-# STXS analysis
-XSBRMap['STXS'] = od()
-XSBRMap['STXS']['decay'] = {'mode':'hgg'}
-# ggH STXS stage 1.2 bins
-XSBRMap['STXS']['GG2H_FWDH'] = {'mode':'ggH','factor':0.0809}
-XSBRMap['STXS']['GG2H_PTH_200_300'] = {'mode':'ggH','factor':0.0098}
-XSBRMap['STXS']['GG2H_PTH_300_450'] = {'mode':'ggH','factor':0.0025}
-XSBRMap['STXS']['GG2H_PTH_450_650'] = {'mode':'ggH','factor':0.0003}
-XSBRMap['STXS']['GG2H_PTH_GT650'] = {'mode':'ggH','factor':0.0001}
-XSBRMap['STXS']['GG2H_0J_PTH_0_10'] = {'mode':'ggH','factor':0.1387}
-XSBRMap['STXS']['GG2H_0J_PTH_GT10'] = {'mode':'ggH','factor':0.3940}
-XSBRMap['STXS']['GG2H_1J_PTH_0_60'] = {'mode':'ggH','factor':0.1477}
-XSBRMap['STXS']['GG2H_1J_PTH_60_120'] = {'mode':'ggH','factor':0.1023}
-XSBRMap['STXS']['GG2H_1J_PTH_120_200'] = {'mode':'ggH','factor':0.0182}
-XSBRMap['STXS']['GG2H_GE2J_MJJ_0_350_PTH_0_60'] = {'mode':'ggH','factor':0.0256}
-XSBRMap['STXS']['GG2H_GE2J_MJJ_0_350_PTH_60_120'] = {'mode':'ggH','factor':0.0410}
-XSBRMap['STXS']['GG2H_GE2J_MJJ_0_350_PTH_120_200'] = {'mode':'ggH','factor':0.0188}
-XSBRMap['STXS']['GG2H_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_0_25'] = {'mode':'ggH','factor':0.0063}
-XSBRMap['STXS']['GG2H_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_GT25'] = {'mode':'ggH','factor':0.0077}
-XSBRMap['STXS']['GG2H_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_0_25'] = {'mode':'ggH','factor':0.0028}
-XSBRMap['STXS']['GG2H_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_GT25'] = {'mode':'ggH','factor':0.0032}
-# ggZH hadronic: merged with ggH STXS stage 1.2 bins in fit
-XSBRMap['STXS']['GG2HQQ_FWDH'] = {'mode':'ggZH','factor':0.0273*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_PTH_200_300'] = {'mode':'ggZH','factor':0.1393*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_PTH_300_450'] = {'mode':'ggZH','factor':0.0386*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_PTH_450_650'] = {'mode':'ggZH','factor':0.0077*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_PTH_GT650'] = {'mode':'ggZH','factor':0.0020*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_0J_PTH_0_10'] = {'mode':'ggZH','factor':0.0001*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_0J_PTH_GT10'] = {'mode':'ggZH','factor':0.0029*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_1J_PTH_0_60'] = {'mode':'ggZH','factor':0.0200*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_1J_PTH_60_120'] = {'mode':'ggZH','factor':0.0534*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_1J_PTH_120_200'] = {'mode':'ggZH','factor':0.0353*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_GE2J_MJJ_0_350_PTH_0_60'] = {'mode':'ggZH','factor':0.0574*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_GE2J_MJJ_0_350_PTH_60_120'] = {'mode':'ggZH','factor':0.1963*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_GE2J_MJJ_0_350_PTH_120_200'] = {'mode':'ggZH','factor':0.2954*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_0_25'] = {'mode':'ggZH','factor':0.0114*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_GT25'] = {'mode':'ggZH','factor':0.0806*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_0_25'] = {'mode':'ggZH','factor':0.0036*BR_Z_qq}
-XSBRMap['STXS']['GG2HQQ_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_GT25'] = {'mode':'ggZH','factor':0.0285*BR_Z_qq}
-# qqH STXS stage 1.2 bins: including (qq)VH hadronic processes
-XSBRMap['STXS']['VBF_FWDH'] = {'mode':'qqH','factor':0.0669}
-XSBRMap['STXS']['VBF_0J'] = {'mode':'qqH','factor':0.0695}
-XSBRMap['STXS']['VBF_1J'] = {'mode':'qqH','factor':0.3283}
-XSBRMap['STXS']['VBF_GE2J_MJJ_0_60'] = {'mode':'qqH','factor':0.0136}
-XSBRMap['STXS']['VBF_GE2J_MJJ_60_120'] = {'mode':'qqH','factor':0.0240}
-XSBRMap['STXS']['VBF_GE2J_MJJ_120_350'] = {'mode':'qqH','factor':0.1234}
-XSBRMap['STXS']['VBF_GE2J_MJJ_GT350_PTH_GT200'] = {'mode':'qqH','factor':0.0398}
-XSBRMap['STXS']['VBF_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_0_25'] = {'mode':'qqH','factor':0.1026}
-XSBRMap['STXS']['VBF_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_GT25'] = {'mode':'qqH','factor':0.0385}
-XSBRMap['STXS']['VBF_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_0_25'] = {'mode':'qqH','factor':0.1509}
-XSBRMap['STXS']['VBF_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_GT25'] = {'mode':'qqH','factor':0.0425}
-XSBRMap['STXS']['WH2HQQ_FWDH'] = {'mode':'WH','factor':0.1257*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_0J'] = {'mode':'WH','factor':0.0570*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_1J'] = {'mode':'WH','factor':0.3113*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_GE2J_MJJ_0_60'] = {'mode':'WH','factor':0.0358*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_GE2J_MJJ_60_120'] = {'mode':'WH','factor':0.2943*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_GE2J_MJJ_120_350'] = {'mode':'WH','factor':0.1392*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_GE2J_MJJ_GT350_PTH_GT200'] = {'mode':'WH','factor':0.0088*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_0_25'] = {'mode':'WH','factor':0.0044*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_GT25'] = {'mode':'WH','factor':0.0186*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_0_25'] = {'mode':'WH','factor':0.0009*BR_W_qq}
-XSBRMap['STXS']['WH2HQQ_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_GT25'] = {'mode':'WH','factor':0.0040*BR_W_qq}
-XSBRMap['STXS']['ZH2HQQ_FWDH'] = {'mode':'qqZH','factor':0.1143*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_0J'] = {'mode':'qqZH','factor':0.0433*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_1J'] = {'mode':'qqZH','factor':0.2906*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_GE2J_MJJ_0_60'] = {'mode':'qqZH','factor':0.0316*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_GE2J_MJJ_60_120'] = {'mode':'qqZH','factor':0.3360*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_GE2J_MJJ_120_350'] = {'mode':'qqZH','factor':0.1462*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_GE2J_MJJ_GT350_PTH_GT200'] = {'mode':'qqZH','factor':0.0083*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_0_25'] = {'mode':'qqZH','factor':0.0041*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_GT25'] = {'mode':'qqZH','factor':0.0202*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_0_25'] = {'mode':'qqZH','factor':0.0009*BR_Z_qq}
-XSBRMap['STXS']['ZH2HQQ_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_GT25'] = {'mode':'qqZH','factor':0.0045*BR_Z_qq}
-# WH lep STXS stage 1.2 bins
-XSBRMap['STXS']['QQ2HLNU_FWDH'] = {'mode':'WH','factor':0.1213*BR_W_lnu}
-XSBRMap['STXS']['QQ2HLNU_PTV_0_75'] = {'mode':'WH','factor':0.4655*BR_W_lnu}
-XSBRMap['STXS']['QQ2HLNU_PTV_75_150'] = {'mode':'WH','factor':0.2930*BR_W_lnu}
-XSBRMap['STXS']['QQ2HLNU_PTV_150_250_0J'] = {'mode':'WH','factor':0.0510*BR_W_lnu}
-XSBRMap['STXS']['QQ2HLNU_PTV_150_250_GE1J'] = {'mode':'WH','factor':0.0397*BR_W_lnu}
-XSBRMap['STXS']['QQ2HLNU_PTV_GT250'] = {'mode':'WH','factor':0.0295*BR_W_lnu}
-# (qq)ZH lep STXS stage 1.2 bins
-XSBRMap['STXS']['QQ2HLL_FWDH'] = {'mode':'qqZH','factor':0.1121*(BR_Z_ll+BR_Z_nunu)}
-XSBRMap['STXS']['QQ2HLL_PTV_0_75'] = {'mode':'qqZH','factor':0.4565*(BR_Z_ll+BR_Z_nunu)}
-XSBRMap['STXS']['QQ2HLL_PTV_75_150'] = {'mode':'qqZH','factor':0.3070*(BR_Z_ll+BR_Z_nunu)}
-XSBRMap['STXS']['QQ2HLL_PTV_150_250_0J'] = {'mode':'qqZH','factor':0.0516*(BR_Z_ll+BR_Z_nunu)}
-XSBRMap['STXS']['QQ2HLL_PTV_150_250_GE1J'] = {'mode':'qqZH','factor':0.0427*(BR_Z_ll+BR_Z_nunu)}
-XSBRMap['STXS']['QQ2HLL_PTV_GT250'] = {'mode':'qqZH','factor':0.0301*(BR_Z_ll+BR_Z_nunu)}
-# gg(ZH) lep STXS stage 1.2 bins: separate processes for ll and nunu decays
-XSBRMap['STXS']['GG2HLL_FWDH'] = {'mode':'ggZH','factor':0.0270*BR_Z_ll}
-XSBRMap['STXS']['GG2HLL_PTV_0_75'] = {'mode':'ggZH','factor':0.1605*BR_Z_ll}
-XSBRMap['STXS']['GG2HLL_PTV_75_150'] = {'mode':'ggZH','factor':0.4325*BR_Z_ll}
-XSBRMap['STXS']['GG2HLL_PTV_150_250_0J'] = {'mode':'ggZH','factor':0.0913*BR_Z_ll}
-XSBRMap['STXS']['GG2HLL_PTV_150_250_GE1J'] = {'mode':'ggZH','factor':0.2044*BR_Z_ll}
-XSBRMap['STXS']['GG2HLL_PTV_GT250'] = {'mode':'ggZH','factor':0.0844*BR_Z_ll}
-XSBRMap['STXS']['GG2HNUNU_FWDH'] = {'mode':'ggZH','factor':0.0271*BR_Z_nunu}
-XSBRMap['STXS']['GG2HNUNU_PTV_0_75'] = {'mode':'ggZH','factor':0.1591*BR_Z_nunu}
-XSBRMap['STXS']['GG2HNUNU_PTV_75_150'] = {'mode':'ggZH','factor':0.4336*BR_Z_nunu}
-XSBRMap['STXS']['GG2HNUNU_PTV_150_250_0J'] = {'mode':'ggZH','factor':0.0905*BR_Z_nunu}
-XSBRMap['STXS']['GG2HNUNU_PTV_150_250_GE1J'] = {'mode':'ggZH','factor':0.2051*BR_Z_nunu}
-XSBRMap['STXS']['GG2HNUNU_PTV_GT250'] = {'mode':'ggZH','factor':0.0845*BR_Z_nunu}
-# ttH STXS stage 1.2 bins
-XSBRMap['STXS']['TTH_FWDH'] = {'mode':'ttH','factor':0.0135}
-XSBRMap['STXS']['TTH_PTH_0_60'] = {'mode':'ttH','factor':0.2250}
-XSBRMap['STXS']['TTH_PTH_60_120'] = {'mode':'ttH','factor':0.3473}
-XSBRMap['STXS']['TTH_PTH_120_200'] = {'mode':'ttH','factor':0.2569}
-XSBRMap['STXS']['TTH_PTH_200_300'] = {'mode':'ttH','factor':0.1076}
-XSBRMap['STXS']['TTH_PTH_GT300'] = {'mode':'ttH','factor':0.0533}
-# bbH STXS stage 1.2 bins
-XSBRMap['STXS']['BBH_FWDH'] = {'mode':'bbH','factor':0.0487}
-XSBRMap['STXS']['BBH'] = {'mode':'bbH','factor':0.9513}
-# tH STXS stage 1.2 bins: tHq + tHW
-XSBRMap['STXS']['THQ_FWDH'] = {'mode':'tHq','factor':0.0279}
-XSBRMap['STXS']['THQ'] = {'mode':'tHq','factor':0.9721}
-XSBRMap['STXS']['THW_FWDH'] = {'mode':'tHW','factor':0.0106}
-XSBRMap['STXS']['THW'] = {'mode':'tHW','factor':0.9894}
 
+# ttH/tH analysis maps are maintained in Signal/tools/XSBRMap.py only.
+# Datacard uses that map below via _load_signal_xsbr_map().
 
-# ttH / tH Run3 CP analysis
-XSBRMap['tth_th_analysis'] = od()
-XSBRMap['tth_th_analysis']['decay'] = {'mode':'hgg'}
-# define ttH SM and CP-odd cross sections (pb) for reuse in polynomial scaling
-tth_sm_xs = 0.5638
-tth_cpodd_xs = tth_sm_xs * (0.2352 / 0.5582)
-kt_diag = (2.0**0.5) / 2.0  # 0.7071...
+# Use Signal/tools/XSBRMap.py as the single source of truth for XS*BR maps.
+def _load_signal_xsbr_map():
+  this_dir = os.path.dirname(os.path.abspath(__file__))
+  flashgg_dir = os.path.abspath(os.path.join(this_dir, "..", ".."))
+  signal_tools_dir = os.path.join(flashgg_dir, "Signal", "tools")
+  common_tools_dir = os.path.join(flashgg_dir, "commonTools")
+  for p in (signal_tools_dir, common_tools_dir):
+    if p not in sys.path:
+      sys.path.insert(0, p)
+  try:
+    from XSBRMap import globalXSBRMap as signal_xsbr_map
+  except Exception as exc:
+    raise RuntimeError(
+      "Failed to import Signal/tools/XSBRMap.py. "
+      "Please check PYTHONPATH/CMSSW env. Original error: %s" % exc
+    )
+  return signal_xsbr_map
 
-XSBRMap['tth_th_analysis']['GG2H'] = {'mode':'constant','factor':51.96}
-XSBRMap['tth_th_analysis']['VBF'] = {'mode':'constant','factor':4.067}
-XSBRMap['tth_th_analysis']['VH'] = {'mode':'constant','factor':2.3781}
-XSBRMap['tth_th_analysis']['TTH'] = {'mode':'constant','factor':tth_sm_xs}
-# the BSM cross sections follow σ = σ_SM * k^2 + σ_CPodd * ktilde^2
-XSBRMap['tth_th_analysis']['tthCPodd'] = {'mode':'constant','factor':tth_cpodd_xs}
-XSBRMap['tth_th_analysis']['tthKt0p7Ktt0p7'] = {'mode':'constant','factor':tth_sm_xs * (kt_diag**2) + tth_cpodd_xs * (kt_diag**2)}
-XSBRMap['tth_th_analysis']['tthKt0p7Kttm0p7'] = {'mode':'constant','factor':tth_sm_xs * (kt_diag**2) + tth_cpodd_xs * (kt_diag**2)}
-XSBRMap['tth_th_analysis']['tthKt0Kttm1'] = {'mode':'constant','factor':tth_cpodd_xs * (1.0**2)}
-XSBRMap['tth_th_analysis']['tthKt0Ktt0'] = {'mode':'constant','factor':tth_sm_xs * (0.0**2) + tth_cpodd_xs * (0.0**2)}
-XSBRMap['tth_th_analysis']['tHqLep'] = {'mode':'constant','factor': 0.0832 * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHad'] = {'mode':'constant','factor': 0.0832 * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKtm1Ktt0'] = {'mode':'constant','factor': 0.0832 * (0.246 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKtm1Ktt0'] = {'mode':'constant','factor': 0.0832 * (0.246 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepCPodd'] = {'mode':'constant','factor': 0.0832 * (0.09406 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadCPodd'] = {'mode':'constant','factor': 0.0832 * (0.09406 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKt0p7Ktt0p7'] = {'mode':'constant','factor': 0.0832 * (0.03508 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKt0p7Ktt0p7'] = {'mode':'constant','factor': 0.0832 * (0.03508 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKt0p7Kttm0p7'] = {'mode':'constant','factor': 0.0832 * (0.03462 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKt0p7Kttm0p7'] = {'mode':'constant','factor': 0.0832 * (0.03462 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKt0Kttm1'] = {'mode':'constant','factor': 0.0832 * (0.09523 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKt0Kttm1'] = {'mode':'constant','factor': 0.0832 * (0.09523 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKt0Ktt0'] = {'mode':'constant','factor': 0.0832 * (0.07338 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKt0Ktt0'] = {'mode':'constant','factor': 0.0832 * (0.07338 / 0.018) * (1-0.3258)}
-# for tHW, the LHEReweights already give the correct cross-section, so use the SM value for all
-XSBRMap['tth_th_analysis']['tHW'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWCPodd'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKtm1Ktt0'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKt0p7Ktt0p7'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKt0p7Kttm0p7'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKt0Kttm1'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKt0Ktt0'] = {'mode':'constant','factor':0.0172}
-
-XSBRMap['tth_th_analysis']['bbh'] = {'mode':'constant','factor':0.5213}
-XSBRMap['tth_th_analysis']['ggh_incl'] = {'mode':'constant','factor':51.96}
-XSBRMap['tth_th_analysis']['vbf_incl'] = {'mode':'constant','factor':4.067}
-XSBRMap['tth_th_analysis']['vh_incl'] = {'mode':'constant','factor':2.3781}
-XSBRMap['tth_th_analysis']['tth_incl'] = {'mode':'constant','factor':tth_sm_xs}
-XSBRMap['tth_th_analysis']['tthCPodd_incl'] = {'mode':'constant','factor':tth_cpodd_xs}
-XSBRMap['tth_th_analysis']['tthKt0p7Ktt0p7_incl'] = {'mode':'constant','factor':tth_sm_xs * (kt_diag**2) + tth_cpodd_xs * (kt_diag**2)}
-XSBRMap['tth_th_analysis']['tthKt0p7Kttm0p7_incl'] = {'mode':'constant','factor':tth_sm_xs * (kt_diag**2) + tth_cpodd_xs * (kt_diag**2)}
-XSBRMap['tth_th_analysis']['tthKt0Kttm1_incl'] = {'mode':'constant','factor':tth_cpodd_xs * (1.0**2)}
-XSBRMap['tth_th_analysis']['tthKt0Ktt0_incl'] = {'mode':'constant','factor':tth_sm_xs * (0.0**2) + tth_cpodd_xs * (0.0**2)}
-XSBRMap['tth_th_analysis']['tHqLep_incl'] = {'mode':'constant','factor': 0.0832 * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHad_incl'] = {'mode':'constant','factor': 0.0832 * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKtm1Ktt0_incl'] = {'mode':'constant','factor': 0.0832 * (0.246 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKtm1Ktt0_incl'] = {'mode':'constant','factor': 0.0832 * (0.246 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepCPodd_incl'] = {'mode':'constant','factor': 0.0832 * (0.09406 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadCPodd_incl'] = {'mode':'constant','factor': 0.0832 * (0.09406 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKt0p7Ktt0p7_incl'] = {'mode':'constant','factor': 0.0832 * (0.03508 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKt0p7Ktt0p7_incl'] = {'mode':'constant','factor': 0.0832 * (0.03508 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKt0p7Kttm0p7_incl'] = {'mode':'constant','factor': 0.0832 * (0.03462 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKt0p7Kttm0p7_incl'] = {'mode':'constant','factor': 0.0832 * (0.03462 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKt0Kttm1_incl'] = {'mode':'constant','factor': 0.0832 * (0.09523 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKt0Kttm1_incl'] = {'mode':'constant','factor': 0.0832 * (0.09523 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHqLepKt0Ktt0_incl'] = {'mode':'constant','factor': 0.0832 * (0.07338 / 0.018) * 0.3258}
-XSBRMap['tth_th_analysis']['tHqHadKt0Ktt0_incl'] = {'mode':'constant','factor': 0.0832 * (0.07338 / 0.018) * (1-0.3258)}
-XSBRMap['tth_th_analysis']['tHW_incl'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWCPodd_incl'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKtm1Ktt0_incl'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKt0p7Ktt0p7_incl'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKt0p7Kttm0p7_incl'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKt0Kttm1_incl'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['tHWKt0Ktt0_incl'] = {'mode':'constant','factor':0.0172}
-XSBRMap['tth_th_analysis']['bbh_incl'] = {'mode':'constant','factor':0.5213}
-
-# Alias for decorrelated setup: reuse the same XSBR map
-XSBRMap['tth_th_analysis_noDeco'] = XSBRMap['tth_th_analysis']
-
-# Fiducial XS map (in/out splitting) built from ttH/tH inclusive map
-def _build_inout_map(base_map):
-  inout_map = od()
-  inout_map["decay"] = base_map["decay"]
-  for proc, cfg in base_map.items():
-    if proc == "decay":
-      continue
-    if proc.endswith("_incl") or proc.endswith("_in") or proc.endswith("_out"):
-      continue
-    base_name = procToDatacardName(proc)
-    fallback = {"VH": "vh", "VBF": "vbf", "GG2H": "ggh", "TTH": "tth"}
-    base_name = fallback.get(proc, base_name)
-    in_key = "%s_in" % base_name
-    out_key = "%s_out" % base_name
-    inout_map[in_key] = dict(cfg)
-    inout_map[out_key] = dict(cfg)
-  return inout_map
-
-
-def _apply_sm_rates_to_fiducial(fiducial_map, sm_map):
-  sm_rates = {
-    "tth": sm_map["TTH"]["factor"],
-    "thw": sm_map["tHW"]["factor"],
-    "thqlep": sm_map["tHqLep"]["factor"],
-    "thqhad": sm_map["tHqHad"]["factor"],
-  }
-  updated = od()
-  updated["decay"] = fiducial_map["decay"]
-  for proc, cfg in fiducial_map.items():
-    if proc == "decay":
-      continue
-    new_cfg = dict(cfg)
-    proc_lower = proc.lower()
-    if proc_lower.startswith("tth"):
-      new_cfg["factor"] = sm_rates["tth"]
-    elif proc_lower.startswith("thw"):
-      new_cfg["factor"] = sm_rates["thw"]
-    elif proc_lower.startswith("thqlep"):
-      new_cfg["factor"] = sm_rates["thqlep"]
-    elif proc_lower.startswith("thqhad"):
-      new_cfg["factor"] = sm_rates["thqhad"]
-    updated[proc] = new_cfg
-  return updated
-
-
-XSBRMap["tth_th_analysis_fiducial"] = _build_inout_map(
-  XSBRMap["tth_th_analysis"]
-)
-# Override fiducial rates with SM values (keep BSM map above for easy rollback).
-XSBRMap["tth_th_analysis_fiducial"] = _apply_sm_rates_to_fiducial(
-  XSBRMap["tth_th_analysis_fiducial"],
-  XSBRMap["tth_th_analysis"],
-)
-XSBRMap["tth_th_analysis_fiducial_noDeco"] = XSBRMap["tth_th_analysis_fiducial"]
-
-
-# Early Run 3 Hgg analysis WITH in/out splitting TBD
-XSBRMap['tth_th_analysisInOut'] = od()
-XSBRMap['tth_th_analysisInOut']['decay'] = {'mode':'hgg'}
-# Also adding the lower-case strings (Nico convention)
-XSBRMap['tth_th_analysisInOut']['ggh_in'] = {'mode':'constant','factor':51.96}
-XSBRMap['tth_th_analysisInOut']['vbf_in'] = {'mode':'constant','factor':4.067}
-XSBRMap['tth_th_analysisInOut']['vh_in'] = {'mode':'constant','factor':2.3781}
-XSBRMap['tth_th_analysisInOut']['tth_in'] = {'mode':'constant','factor':0.5638}
-XSBRMap['tth_th_analysisInOut']['ggh_out'] = {'mode':'constant','factor':51.96}
-XSBRMap['tth_th_analysisInOut']['vbf_out'] = {'mode':'constant','factor':4.067}
-XSBRMap['tth_th_analysisInOut']['vh_out'] = {'mode':'constant','factor':2.3781}
-XSBRMap['tth_th_analysisInOut']['tth_out'] = {'mode':'constant','factor':0.5638}
+XSBRMap = _load_signal_xsbr_map()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Functions for loading XS*BR below
@@ -347,10 +101,47 @@ def extractXSBR(d,mass='125',analysis='STXS'):
   xsbr = initialiseXSBR(mass)
   # Define map of procs to XS,BR
   XSBR_for_analysis = od()
+
+  def _infer_missing_cfg(_proc, _analysis):
+    """
+    Fallback for new coupling labels not explicitly listed in XSBRMap.
+    For fiducial analyses we intentionally use SM rates for ttH/tH variants.
+    """
+    if "fiducial" not in _analysis:
+      return None
+    sm_map = XSBRMap['tth_th_analysis']
+    p = _proc.lower()
+    if p.startswith("tth"):
+      return {'mode': 'constant', 'factor': sm_map['TTH']['factor']}
+    if p.startswith("thw"):
+      return {'mode': 'constant', 'factor': sm_map['tHW']['factor']}
+    if p.startswith("thqlep"):
+      return {'mode': 'constant', 'factor': sm_map['tHqLep']['factor']}
+    if p.startswith("thqhad"):
+      return {'mode': 'constant', 'factor': sm_map['tHqHad']['factor']}
+    if p.startswith("ggh"):
+      return {'mode': 'constant', 'factor': sm_map['GG2H']['factor']}
+    if p.startswith("vbf"):
+      return {'mode': 'constant', 'factor': sm_map['VBF']['factor']}
+    if p.startswith("vh"):
+      return {'mode': 'constant', 'factor': sm_map['VH']['factor']}
+    if p.startswith("bbh"):
+      return {'mode': 'constant', 'factor': sm_map['bbh']['factor']}
+    return None
+
   # XS
   for proc in d[d['type']=='sig']['procOriginal'].unique():
-    fp = XSBRMap[analysis][proc]['factor'] if 'factor' in XSBRMap[analysis][proc] else 1.
-    mode = XSBRMap[analysis][proc]['mode']
+    proc_cfg = XSBRMap[analysis].get(proc)
+    if proc_cfg is None:
+      proc_cfg = _infer_missing_cfg(proc, analysis)
+      if proc_cfg is None:
+        raise KeyError(
+          "Process '%s' missing in XSBRMap[%s]. "
+          "Add it to datacardTools/XSBR.py or provide an inference rule." % (proc, analysis)
+        )
+      print("[WARN] XSBR fallback for %s in %s -> mode=%s, factor=%s" % (proc, analysis, proc_cfg['mode'], proc_cfg.get('factor', 1.)))
+    fp = proc_cfg['factor'] if 'factor' in proc_cfg else 1.
+    mode = proc_cfg['mode']
     xs = fp*xsbr[mode]
     XSBR_for_analysis['XS_%s'%proc] = xs
   # BR
