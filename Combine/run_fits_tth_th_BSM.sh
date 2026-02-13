@@ -18,9 +18,15 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #
 # How to run:
 #   bash run_fits_tth_th_BSM.sh --step 0
-#   bash run_fits_tth_th_BSM.sh --step 1
+#   bash run_fits_tth_th_BSM.sh --steps 1,3
 #   bash run_fits_tth_th_BSM.sh --steps 2,5
 #   bash run_fits_tth_th_BSM.sh --step plot
+#   bash run_fits_tth_th_BSM.sh --step 2 --max-materialize 10
+#
+# Condor throttling:
+#   --max-materialize N limits how many jobs are materialized at once for each
+#   submitted fit task (i.e. each coupling/mode batch submitted by RunFits.py).
+#   This helps reduce filesystem pressure when many points are queued.
 
 
 
@@ -37,21 +43,28 @@ print_usage() {
 Usage: run_fits_tth_th_BSM.sh --step <list>
   --step/--steps accepts comma-separated values (names or numbers):
     0 / models
-    1 / asimov-sm
+    1 / asimov-sm (or other asimovLabel option), scanning over fits with different signal models
     2 / smfits
-    3 / bsmasimov
+    3 / bsmasimov, fit with SM signal model
     4 / bsmfit
     5 / plot
   Example: --steps 0,1,5
   Optional:
     --fine-grid   run an additional fine 2D scan in the same output directory
-    --setPdfIndices  freeze discrete pdfindex nuisances using pdfindex.json
-      (override path with PDFINDEX_SOURCE=/path/to/pdfindex.json)
+    --setPdfIndices  freeze discrete pdfindex nuisances using defaults in workspace
     --noDeco      use noDeco analysis tag and model paths
+    --asimovLabel <SM|CPodd|Ktm1Ktt0|...>  use this Asimov dataset for type-A scans (default: SM)
+    --couplings <basic-bsm|extended-bsm|sm-only|all>  select coupling set (default: basic-bsm), affects steps 2, 3, 4, 5
+    --max-materialize <N>  pass Condor max_materialize to RunFits submissions
+  example for step 5:
+    bash run_fits_tth_th_BSM.sh --step 5 --asimovLabel CPodd --setPdfIndices
 EOF
 }
 
 STEPS_RAW=""
+ASIMOV_LABEL="SM"
+COUPLINGS_SET="basic-bsm"
+MAX_MATERIALIZE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --step|--steps)
@@ -78,6 +91,18 @@ while [[ $# -gt 0 ]]; do
       USE_NODECO=1
       shift 1
       ;;
+    --asimovLabel)
+      ASIMOV_LABEL="$2"
+      shift 2
+      ;;
+    --couplings)
+      COUPLINGS_SET="$2"
+      shift 2
+      ;;
+    --max-materialize)
+      MAX_MATERIALIZE="$2"
+      shift 2
+      ;;
     -h|--help)
       print_usage
       exit 0
@@ -94,6 +119,15 @@ if [[ -z "${STEPS_RAW}" ]]; then
   echo "[ERROR] No steps selected. Use --step/--steps." >&2
   print_usage >&2
   exit 1
+fi
+
+RUNFITS_SUBOPTS=""
+if [[ -n "${MAX_MATERIALIZE}" ]]; then
+  if ! [[ "${MAX_MATERIALIZE}" =~ ^[0-9]+$ ]]; then
+    echo "[ERROR] --max-materialize must be an integer (got '${MAX_MATERIALIZE}')." >&2
+    exit 1
+  fi
+  RUNFITS_SUBOPTS="max_materialize = ${MAX_MATERIALIZE}"
 fi
 
 DO_SYNC_MODELS=0
@@ -177,22 +211,11 @@ if [[ "${ANALYSIS_TAG}" == *"_fiducial"* ]]; then
 fi
 MODEL_SRC_BACKGROUND="${MODEL_SRC_BACKGROUND:-${DEFAULT_BKG_DIR}}"
 
-PDFINDEX_SOURCE="${PDFINDEX_SOURCE:-${OUTPUT_BASE}/pdfindex_${ANALYSIS_TAG}.json}"
-
-ensure_pdfindex_json() {
-  local ext="$1"
-  if [[ ${SET_PDFINDICES} -ne 1 ]]; then
-    return 0
-  fi
-  [[ -f "${PDFINDEX_SOURCE}" ]] || { echo "[ERROR] Missing ${PDFINDEX_SOURCE} for --setPdfIndices" >&2; exit 1; }
-  cp -f "${PDFINDEX_SOURCE}" "${OUTPUT_BASE}/pdfindex${ext}.json"
-}
-
 if [[ ${SET_PDFINDICES} -eq 1 ]]; then
-  echo "[INFO] --setPdfIndices enabled; using PDFINDEX_SOURCE=${PDFINDEX_SOURCE}"
+  echo "[INFO] --setPdfIndices enabled; freezing pdfindex parameters from workspace defaults"
 fi
 
-SM_ASIMOV_TAG=${SM_ASIMOV_TAG:-SM_Asimov}
+SM_ASIMOV_TAG=${SM_ASIMOV_TAG:-${ASIMOV_LABEL}_Asimov}
 BSM_ASIMOV_TAG=${BSM_ASIMOV_TAG:-BSM_Asimov}
 POINTS_2D_TOTAL=${POINTS_2D_TOTAL:-20000}
 POINTS_2D_SPLIT=${POINTS_2D_SPLIT:-400}
@@ -291,8 +314,31 @@ declare -A CARD_MAP=(
   ["Kt0p7Kttm0p7"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0p7Kttm0p7.txt"
   ["Kt0Kttm1"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0Kttm1.txt"
   ["Kt0Ktt0"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0Ktt0.txt"
+  ["Kt0p500Ktt0p000"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0p500Ktt0p000.txt"
+  ["Kt0p354Ktt0p354"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0p354Ktt0p354.txt"
+  ["Kt0p000Ktt0p500"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0p000Ktt0p500.txt"
+  ["Ktm0p500Ktt0p000"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Ktm0p500Ktt0p000.txt"
+  ["Kt0p000Kttm0p500"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0p000Kttm0p500.txt"
+  ["Kt0p354Kttm0p354"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0p354Kttm0p354.txt"
+  ["Kt1p500Ktt0p000"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt1p500Ktt0p000.txt"
+  ["Kt1p061Ktt1p061"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt1p061Ktt1p061.txt"
+  ["Kt0p000Ktt1p500"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0p000Ktt1p500.txt"
+  ["Ktm1p500Ktt0p000"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Ktm1p500Ktt0p000.txt"
+  ["Kt0p000Kttm1p500"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt0p000Kttm1p500.txt"
+  ["Kt1p061Kttm1p061"]="${DATACARD_BASE}/Datacard_${ANALYSIS_TAG}_Kt1p061Kttm1p061.txt"
 )
-CPL_ORDER=("SM" "CPodd" "Ktm1Ktt0" "Kt0p7Ktt0p7" "Kt0p7Kttm0p7" "Kt0Kttm1" "Kt0Ktt0")
+BASIC_CPL_ORDER=("SM" "CPodd" "Ktm1Ktt0" "Kt0p7Ktt0p7" "Kt0p7Kttm0p7" "Kt0Kttm1" "Kt0Ktt0")
+EXT_CPL_ORDER=("Kt0p500Ktt0p000" "Kt0p354Ktt0p354" "Kt0p000Ktt0p500" "Ktm0p500Ktt0p000" "Kt0p000Kttm0p500" "Kt0p354Kttm0p354" "Kt1p500Ktt0p000" "Kt1p061Ktt1p061" "Kt0p000Ktt1p500" "Ktm1p500Ktt0p000" "Kt0p000Kttm1p500" "Kt1p061Kttm1p061")
+case "${COUPLINGS_SET}" in
+  basic-bsm)    CPL_ORDER=("${BASIC_CPL_ORDER[@]}") ;;
+  extended-bsm) CPL_ORDER=("${EXT_CPL_ORDER[@]}") ;;
+  sm-only)      CPL_ORDER=("SM") ;;
+  all)          CPL_ORDER=("${BASIC_CPL_ORDER[@]}" "${EXT_CPL_ORDER[@]}") ;;
+  *)
+    echo "[ERROR] Invalid --couplings '${COUPLINGS_SET}' (use basic-bsm|extended-bsm|sm-only|all)" >&2
+    exit 1
+    ;;
+esac
 
 # helper
 prepare_card() {
@@ -549,15 +595,36 @@ print(f"{m.group(1)},{m.group(2)}")
 PY
 }
 
+mode_exists_in_json() {
+  local json_path="$1"
+  local mode="$2"
+  python3 - "${json_path}" "${mode}" <<'PY'
+import json
+import sys
+json_path, mode = sys.argv[1:3]
+data = json.load(open(json_path))
+sys.exit(0 if mode in data else 1)
+PY
+}
+
 ################################################################################
 # STEP 0: build SM Asimov toy
 ################################################################################
-ASIMOV_EXT="SMAsimov${ASIMOV_SUFFIX}"
+if [[ "${ASIMOV_LABEL}" == "SM" ]]; then
+  ASIMOV_EXT="SMAsimov${ASIMOV_SUFFIX}"
+  ASIMOV_TOY="higgsCombine${ASIMOV_EXT}.GenerateOnly.mH125.38.0.root"
+else
+  ASIMOV_EXT="${ASIMOV_LABEL}_Asimov${ASIMOV_SUFFIX}"
+  ASIMOV_TOY="higgsCombine${ASIMOV_EXT}.GenerateOnly.mH125.38.0.root"
+fi
 ASIMOV_ROOT="Datacard_${ASIMOV_EXT}.root"
-ASIMOV_TOY="higgsCombine${ASIMOV_EXT}.GenerateOnly.mH125.38.0.root"
 TOYS_FILE="${OUTPUT_BASE}/${ASIMOV_TOY}"
 
 if [[ ${DO_ASIMOV_SM} -eq 1 ]]; then
+  if [[ "${ASIMOV_LABEL}" != "SM" ]]; then
+    echo "[ERROR] Step 1 builds only the SM Asimov dataset. Use --asimovLabel SM or run step 3 for ${ASIMOV_LABEL} Asimov." >&2
+    exit 1
+  fi
   pushd "${OUTPUT_BASE}" >/dev/null
   # SM Asimov
   prepare_card "$CARD_SM" "Datacard_${ASIMOV_EXT}.txt"
@@ -572,7 +639,7 @@ fi
 # (A) Fit SM Asimov with each BSM template
 ################################################################################
 if [[ ${DO_SM_FITS} -eq 1 ]]; then
-  [[ -f "${TOYS_FILE}" ]] || { echo "[ERROR] SM Asimov toy not found at ${TOYS_FILE}. Run step 0 first." >&2; exit 1; }
+  [[ -f "${TOYS_FILE}" ]] || { echo "[ERROR] Asimov toy not found at ${TOYS_FILE}. Build ${ASIMOV_LABEL} Asimov first (step 0 for SM, step 3 for BSM)." >&2; exit 1; }
   INPUT_JSON_SM="${SCALED_JSON_DIR}/inputs_statonly_tth_th_scaled${MODE_SUFFIX}.json"
   # SM Asimov (SM rates) fitted with BSM templates: center at 1/XS_ratio, width scaled by 1/XS_ratio.
   build_scaled_json "inverse" "inverse" "" "${INPUT_JSON_SM}"
@@ -593,18 +660,21 @@ if [[ ${DO_SM_FITS} -eq 1 ]]; then
     if [[ "${CPL}" != "SM" ]]; then
       MODE="r_2D_${CPL}${MODE_SUFFIX}"
     fi
-    echo ">>> [SM Asimov] Processing coupling ${CPL} (mode ${MODE}, ext ${EXT})"
+    if ! mode_exists_in_json "${INPUT_JSON_SM}" "${MODE}"; then
+      echo "[WARN] Mode '${MODE}' missing in ${INPUT_JSON_SM}; skipping ${CPL}." >&2
+      continue
+    fi
+    echo ">>> [Type A scan | Asimov=${ASIMOV_LABEL}] Processing coupling ${CPL} (mode ${MODE}, ext ${EXT})"
     CARD_DIR="${OUTPUT_BASE}/cards/${EXT_RUN}/${CPL}"
     prepare_card "${CARD}" "${CARD_DIR}/Datacard_${EXT_RUN}.txt"
     link_models "${CARD_DIR}"
-    ensure_pdfindex_json "${EXT_RUN}"
     pushd "${CARD_DIR}" >/dev/null
     python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode ${MODE} --batch local --ext ${EXT_RUN} --outputDir .
     popd >/dev/null
     pushd "${OUTPUT_BASE}" >/dev/null
-    python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT_RUN} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS}
+    python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT_RUN} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
     if [[ ${FINE_GRID} -eq 1 ]]; then
-      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM_FINE}" --mode ${MODE} --ext ${EXT_RUN} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS}
+      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM_FINE}" --mode ${MODE} --ext ${EXT_RUN} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
     fi
     popd >/dev/null
   done
@@ -624,6 +694,10 @@ if [[ ${DO_BSM_ASIMOV} -eq 1 ]]; then
     AS_EXT="${CPL}_Asimov${ASIMOV_SUFFIX}"
     CARD_DIR="${OUTPUT_BASE}/cards/${AS_EXT}"
     AS_ROOT="${CARD_DIR}/Datacard_${AS_EXT}.root"
+    if ! mode_exists_in_json "${INPUT_JSON_BASE}" "r_2D_${CPL}${MODE_SUFFIX}"; then
+      echo "[WARN] Mode 'r_2D_${CPL}${MODE_SUFFIX}' missing in ${INPUT_JSON_BASE}; skipping ${CPL} Asimov build." >&2
+      continue
+    fi
     echo ">>> [BSM Asimov] Building ${CPL} Asimov"
     prepare_card "${CARD}" "${CARD_DIR}/Datacard_${AS_EXT}.txt"
     link_models "${CARD_DIR}"
@@ -660,17 +734,20 @@ if [[ ${DO_BSM_FITS} -eq 1 ]]; then
       SM_EXT="${BSM_ASIMOV_TAG}"
       SM_EXT_RUN="${SM_EXT}${PDFIDX_SUFFIX}"
       MODE="r_2D_${CPL}${MODE_SUFFIX}"
+      if ! mode_exists_in_json "${INPUT_JSON_BSM}" "${MODE}"; then
+        echo "[WARN] Mode '${MODE}' missing in ${INPUT_JSON_BSM}; skipping ${CPL}." >&2
+        continue
+      fi
       CARD_DIR="${OUTPUT_BASE}/cards/${SM_EXT_RUN}/${CPL}"
       prepare_card "${CARD_SM}" "${CARD_DIR}/Datacard_${SM_EXT_RUN}.txt"
       link_models "${CARD_DIR}"
-      ensure_pdfindex_json "${SM_EXT_RUN}"
       pushd "${CARD_DIR}" >/dev/null
       python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode r_2D${MODE_SUFFIX} --batch local --ext ${SM_EXT_RUN} --outputDir .
       popd >/dev/null
       pushd "${OUTPUT_BASE}" >/dev/null
-      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT_RUN} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS}
+      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT_RUN} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
       if [[ ${FINE_GRID} -eq 1 ]]; then
-        python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM_FINE}" --mode ${MODE} --ext ${SM_EXT_RUN} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS}
+        python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM_FINE}" --mode ${MODE} --ext ${SM_EXT_RUN} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
       fi
       popd >/dev/null
     else
@@ -686,7 +763,7 @@ if [[ ${DO_PLOT} -eq 1 ]]; then
   echo ">>> Collecting and plotting 2D scans (requires finished fits)"
   pushd "${OUTPUT_BASE}" >/dev/null
   BASE_DIR="$(pwd)"
-  PLOT_BASE_SM="${OUTPUT_BASE}/plots_sm_asimov${PDFIDX_SUFFIX}"
+  PLOT_BASE_SM="${OUTPUT_BASE}/plots_${ASIMOV_LABEL}_asimov${PDFIDX_SUFFIX}"
   PLOT_BASE_BSM="${OUTPUT_BASE}/plots_bsm_asimov${PDFIDX_SUFFIX}"
   INPUT_JSON_SM="${SCALED_JSON_DIR}/inputs_statonly_tth_th_scaled${MODE_SUFFIX}.json"
   # Match the SM-Asimov fit ranges: center at 1/XS_ratio, width ~1/XS_ratio.
@@ -724,7 +801,7 @@ if [[ ${DO_PLOT} -eq 1 ]]; then
     popd >/dev/null
   }
 
-  # (A) SM Asimov fitted with each template
+  # (A) Asimov (label=${ASIMOV_LABEL}) fitted with each template
   for CPL in "${CPL_ORDER[@]}"; do
     MODE="r_2D${MODE_SUFFIX}"
     EXT="${SM_ASIMOV_TAG}${PDFIDX_SUFFIX}"

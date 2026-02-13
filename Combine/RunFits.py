@@ -15,7 +15,7 @@ def get_options():
   parser.add_option('--inputJson', dest='inputJson', default='inputs.json', help="Input json file to define fits")
   parser.add_option('--mode', dest='mode', default='mu_inclusive', help="Type of fit")
   parser.add_option('--ext', dest='ext', default='', help="Running over Datacard with extension")
-  parser.add_option('--setPdfIndices', dest='setPdfIndices', action="store_true", default=False, help="Set pdf indixes from pdfindex.json")
+  parser.add_option('--setPdfIndices', dest='setPdfIndices', action="store_true", default=False, help="Freeze pdfindex nuisances using defaults from the workspace")
   parser.add_option('--doObserved', dest='doObserved', action="store_true", default=False, help="Fit to data")
   parser.add_option('--snapshotWSFile', dest='snapshotWSFile', default='', help="Full path to snapshot WS file (use when running observed statonly as nuisances are froze at postfit values)")
   parser.add_option('--commonOpts', dest='commonOpts', default="--cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2", help="Common combine options for running fits")
@@ -125,19 +125,76 @@ for fidx in range(len(fits)):
     name_suffix = "_%s" % name_suffix
   _name = "%s_%s%s"%(_fit.split(":")[0],_fit.split(":")[1],name_suffix)
 
-  # Setting PDF indices
+  # Determine datacard dir early for workspace lookups
+  if opt.datacardDir != "":
+    datacard_dir = os.path.abspath(opt.datacardDir)
+  else:
+    datacard_dir = os.path.join(os.environ['CMSSW_BASE'], "src", "flashggFinalFit", "Combine")
+
+  # Freezing PDF indices (use defaults stored in workspace; no explicit setParameters)
+  def getPdfIndexNamesFromWS(ws_path):
+    fd = ROOT.TFile(ws_path)
+    ws = fd.Get("w")
+    if not ws:
+      fd.Close()
+      return []
+    names = []
+    nuis = ws.obj("ModelConfig").GetNuisanceParameters()
+    if nuis:
+      for n in nuis.contentsString().split(","):
+        n = n.strip()
+        if n.startswith("pdfindex_"):
+          names.append(n)
+    if not names:
+      # Fallback: scan allVars in case pdfindex_* not listed as nuisances
+      allvars = ws.allVars()
+      it = allvars.createIterator()
+      while True:
+        v = it.Next()
+        if not v:
+          break
+        name = v.GetName()
+        if name.startswith("pdfindex_"):
+          names.append(name)
+    if not names:
+      # pdfindex_* are often RooCategory, so also scan allCats
+      allcats = ws.allCats()
+      itc = allcats.createIterator()
+      while True:
+        c = itc.Next()
+        if not c:
+          break
+        name = c.GetName()
+        if name.startswith("pdfindex_"):
+          names.append(name)
+    ws.Delete()
+    fd.Close()
+    return names
+
   if opt.doObserved: 
     _name += "_obs"
     if opt.setPdfIndices:
-      pdf_opts = getPdfIndicesFromJson("pdfindex%s_observed.json"%opt.ext)
-      pdf_freeze = getPdfFreezeFromJson("pdfindex%s_observed.json"%opt.ext)
+      if opt.snapshotWSFile != '':
+        ws_path = opt.snapshotWSFile
+      else:
+        ws_path = os.path.join(datacard_dir, "Datacard_%s.root" % opt.ext.lstrip('_')) if opt.ext != '' else os.path.join(datacard_dir, "Datacard%s_%s.root"%(opt.ext,opt.mode))
+      pdf_freeze = ",".join(getPdfIndexNamesFromWS(ws_path))
+      if pdf_freeze == '':
+        print("[WARN] --setPdfIndices enabled but no pdfindex_* found in workspace %s" % ws_path)
+      pdf_opts = ''
     else:
       pdf_opts = ''
       pdf_freeze = ''
   else:
     if opt.setPdfIndices:
-      pdf_opts = getPdfIndicesFromJson("pdfindex%s.json"%opt.ext)
-      pdf_freeze = getPdfFreezeFromJson("pdfindex%s.json"%opt.ext)
+      if opt.snapshotWSFile != '':
+        ws_path = opt.snapshotWSFile
+      else:
+        ws_path = os.path.join(datacard_dir, "Datacard_%s.root" % opt.ext.lstrip('_')) if opt.ext != '' else os.path.join(datacard_dir, "Datacard%s_%s.root"%(opt.ext,opt.mode))
+      pdf_freeze = ",".join(getPdfIndexNamesFromWS(ws_path))
+      if pdf_freeze == '':
+        print("[WARN] --setPdfIndices enabled but no pdfindex_* found in workspace %s" % ws_path)
+      pdf_opts = ''
     else:
       pdf_opts = ''
       pdf_freeze = ''
@@ -145,10 +202,6 @@ for fidx in range(len(fits)):
   # File to load workspace
   if opt.snapshotWSFile != '': d_opts = '-d %s --snapshotName MultiDimFit'%opt.snapshotWSFile
   else:
-    if opt.datacardDir != "":
-      datacard_dir = os.path.abspath(opt.datacardDir)
-    else:
-      datacard_dir = os.path.join(os.environ['CMSSW_BASE'], "src", "flashggFinalFit", "Combine")
     # If an extension is provided, text2workspace writes Datacard_<ext>.root
     if opt.ext != '':
       clean_ext = opt.ext.lstrip('_')

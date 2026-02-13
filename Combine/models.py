@@ -1089,3 +1089,55 @@ models = {
 
   "kVkF":"-P HiggsAnalysis.CombinedLimit.LHCHCGModels:K3 --PO BRU=0"
 }
+
+
+def _make_extended_bsm_2d_model(cpl, fiducial=False):
+  if not fiducial:
+    return f"""-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+    --PO "map=.*/tHqLep{cpl}_incl.*:r_tHq[1,-1,5]" \
+    --PO "map=.*/tHqHad{cpl}_incl.*:r_tHq[1,-1,5]" \
+    --PO "map=.*/tth{cpl}_incl.*:r_ttH[1,-1,5]" \
+    --PO "map=.*/tHW{cpl}_incl.*:r_ttH[1,-1,5]" \
+    --PO "map=.*/ggh_incl.*:1" \
+    --PO "map=.*/bbH_incl.*:1" \
+    --PO "map=.*/vbf_incl.*:1" \
+    --PO "map=.*/vh_incl.*:1"
+"""
+  return f"""-P HiggsAnalysis.CombinedLimit.PhysicsModel:multiSignalModel \
+    --PO "map=.*/tHqLep{cpl}_in.*:r_tHq[1,-1,5]" \
+    --PO "map=.*/tHqHad{cpl}_in.*:r_tHq[1,-1,5]" \
+    --PO "map=.*/tth{cpl}_in.*:r_ttH[1,-1,5]" \
+    --PO "map=.*/tHW{cpl}_in.*:r_ttH[1,-1,5]" \
+    --PO "map=.*/ggh_in.*:1" \
+    --PO "map=.*/ggh_out.*:1" \
+    --PO "map=.*/bbh_in.*:1" \
+    --PO "map=.*/bbh_out.*:1" \
+    --PO "map=.*/vbf_in.*:1" \
+    --PO "map=.*/vbf_out.*:1" \
+    --PO "map=.*/vh_in.*:1" \
+    --PO "map=.*/vh_out.*:1" \
+    --PO "map=.*/tHqLep{cpl}_out.*:1" \
+    --PO "map=.*/tHqHad{cpl}_out.*:1" \
+    --PO "map=.*/tth{cpl}_out.*:1" \
+    --PO "map=.*/tHW{cpl}_out.*:1"
+"""
+
+
+# Extended BSM circle points used in the ttH/tH fiducial scans.
+_extended_bsm_points = (
+  "Kt0p500Ktt0p000",
+  "Kt0p354Ktt0p354",
+  "Kt0p000Ktt0p500",
+  "Ktm0p500Ktt0p000",
+  "Kt0p000Kttm0p500",
+  "Kt0p354Kttm0p354",
+  "Kt1p500Ktt0p000",
+  "Kt1p061Ktt1p061",
+  "Kt0p000Ktt1p500",
+  "Ktm1p500Ktt0p000",
+  "Kt0p000Kttm1p500",
+  "Kt1p061Kttm1p061",
+)
+for _cpl in _extended_bsm_points:
+  models[f"r_2D_{_cpl}"] = _make_extended_bsm_2d_model(_cpl, fiducial=False)
+  models[f"r_2D_{_cpl}_fiducial"] = _make_extended_bsm_2d_model(_cpl, fiducial=True)
