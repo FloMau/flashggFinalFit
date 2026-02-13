@@ -163,12 +163,12 @@ globalXSBRMap['STXS']['THW'] = {'mode':'tHW','factor':0.9894}
 ###################################################################################################################################################################################################
 
 # ttH / tH Run3 CP analysis
-# 125.38 GeV values
+# using 125.08 (CMS Run 1+2 4-lepton combination) values, obtained by linear interpolation from ad-interim recommmendations: https://arxiv.org/pdf/2402.09955
 kt_diag = (2.0**0.5) / 2.0  # 0.7071...
-tth_sm_xs = 0.5638
+tth_sm_xs = 0.5689
 tth_cpodd_xs = tth_sm_xs * (0.2352 / 0.5582)
 
-tHq_sm_xs = 0.0832
+tHq_sm_xs = 0.08354
 tHq_lep_frac = 0.3258
 # Least-squares fit of inclusive tHq cross-section ratios (BSM/SM) from simulation points:
 # (1,0)->1.0, (0,1)->0.09406/0.02127, (-1,0)->0.246/0.02127,
@@ -236,11 +236,11 @@ def _add_incl_entries(base_map):
 
 globalXSBRMap['tth_th_analysis'] = od()
 globalXSBRMap['tth_th_analysis']['decay'] = {'mode':'hgg'}
-globalXSBRMap['tth_th_analysis']['GG2H'] = {'mode':'constant','factor':51.96}
-globalXSBRMap['tth_th_analysis']['VBF'] = {'mode':'constant','factor':4.067}
-globalXSBRMap['tth_th_analysis']['VH'] = {'mode':'constant','factor':2.3781}
+globalXSBRMap['tth_th_analysis']['GG2H'] = {'mode':'constant','factor':52.18}
+globalXSBRMap['tth_th_analysis']['VBF'] = {'mode':'constant','factor':4.075}
+globalXSBRMap['tth_th_analysis']['VH'] = {'mode':'constant','factor':2.3958}
 globalXSBRMap['tth_th_analysis']['TTH'] = {'mode':'constant','factor':tth_sm_xs}
-globalXSBRMap['tth_th_analysis']['bbh'] = {'mode':'constant','factor':0.5213}
+globalXSBRMap['tth_th_analysis']['bbh'] = {'mode':'constant','factor':0.5258}
 # the BSM cross sections follow σ = σ_SM * k^2 + σ_CPodd * ktilde^2
 globalXSBRMap['tth_th_analysis']['tthCPodd'] = {'mode':'constant','factor':tth_cpodd_xs}
 globalXSBRMap['tth_th_analysis']['tthKt0p7Ktt0p7'] = {'mode':'constant','factor':tth_sm_xs * (kt_diag**2) + tth_cpodd_xs * (kt_diag**2)}
