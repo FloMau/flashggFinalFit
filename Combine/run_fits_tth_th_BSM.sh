@@ -53,6 +53,7 @@ Usage: run_fits_tth_th_BSM.sh --step <list>
     --fine-grid   run an additional fine 2D scan in the same output directory
     --setPdfIndices  freeze discrete pdfindex nuisances using defaults in workspace
     --noDeco      use noDeco analysis tag and model paths
+    --syst        use syst datacards and signal models (appends _syst to analysis tag)
     --asimovLabel <SM|CPodd|Ktm1Ktt0|...>  use this Asimov dataset for type-A scans (default: SM)
     --couplings <basic-bsm|extended-bsm|sm-only|all>  select coupling set (default: basic-bsm), affects steps 2, 3, 4, 5
     --max-materialize <N>  pass Condor max_materialize to RunFits submissions
@@ -65,6 +66,8 @@ STEPS_RAW=""
 ASIMOV_LABEL="SM"
 COUPLINGS_SET="basic-bsm"
 MAX_MATERIALIZE=""
+USE_SYST=0
+MASS=125.08
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --step|--steps)
@@ -89,6 +92,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --noDeco)
       USE_NODECO=1
+      shift 1
+      ;;
+    --syst)
+      USE_SYST=1
       shift 1
       ;;
     --asimovLabel)
@@ -182,6 +189,9 @@ if [[ "${FIDUCIAL}" == "true" ]]; then
 fi
 if [[ ${USE_NODECO} -eq 1 ]]; then
   ANALYSIS_TAG="${ANALYSIS_TAG}_noDeco"
+fi
+if [[ ${USE_SYST} -eq 1 ]]; then
+  ANALYSIS_TAG="${ANALYSIS_TAG}_syst"
 fi
 PDFIDX_SUFFIX=""
 RUNFITS_PDFOPTS=""
@@ -612,10 +622,10 @@ PY
 ################################################################################
 if [[ "${ASIMOV_LABEL}" == "SM" ]]; then
   ASIMOV_EXT="SMAsimov${ASIMOV_SUFFIX}"
-  ASIMOV_TOY="higgsCombine${ASIMOV_EXT}.GenerateOnly.mH125.38.0.root"
+  ASIMOV_TOY="higgsCombine${ASIMOV_EXT}.GenerateOnly.mH${MASS}.0.root"
 else
   ASIMOV_EXT="${ASIMOV_LABEL}_Asimov${ASIMOV_SUFFIX}"
-  ASIMOV_TOY="higgsCombine${ASIMOV_EXT}.GenerateOnly.mH125.38.0.root"
+  ASIMOV_TOY="higgsCombine${ASIMOV_EXT}.GenerateOnly.mH${MASS}.0.root"
 fi
 ASIMOV_ROOT="Datacard_${ASIMOV_EXT}.root"
 TOYS_FILE="${OUTPUT_BASE}/${ASIMOV_TOY}"
@@ -629,9 +639,9 @@ if [[ ${DO_ASIMOV_SM} -eq 1 ]]; then
   # SM Asimov
   prepare_card "$CARD_SM" "Datacard_${ASIMOV_EXT}.txt"
   python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode r_2D${MODE_SUFFIX} --batch local --ext ${ASIMOV_EXT} --outputDir .
-  combine -M GenerateOnly ${ASIMOV_ROOT} -m 125.38 -t -1 \
+  combine -M GenerateOnly ${ASIMOV_ROOT} -m ${MASS} -t -1 \
           --saveWorkspace --saveToys -n ${ASIMOV_EXT} -s 0 \
-          --setParameters r_tHq=1,r_ttH=1,MH=125.38 --freezeParameters MH
+          --setParameters r_tHq=1,r_ttH=1,MH=${MASS} --freezeParameters MH
   popd >/dev/null
 fi
 
@@ -672,9 +682,9 @@ if [[ ${DO_SM_FITS} -eq 1 ]]; then
     python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode ${MODE} --batch local --ext ${EXT_RUN} --outputDir .
     popd >/dev/null
     pushd "${OUTPUT_BASE}" >/dev/null
-    python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT_RUN} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
+    python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT_RUN} --mass ${MASS} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
     if [[ ${FINE_GRID} -eq 1 ]]; then
-      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM_FINE}" --mode ${MODE} --ext ${EXT_RUN} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
+      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM_FINE}" --mode ${MODE} --ext ${EXT_RUN} --mass ${MASS} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
     fi
     popd >/dev/null
   done
@@ -705,9 +715,9 @@ if [[ ${DO_BSM_ASIMOV} -eq 1 ]]; then
     python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode r_2D_${CPL}${MODE_SUFFIX} --batch local --ext ${AS_EXT} --outputDir .
     popd >/dev/null
     pushd "${OUTPUT_BASE}" >/dev/null
-    combine -M GenerateOnly "${AS_ROOT}" -m 125.38 -t -1 \
+    combine -M GenerateOnly "${AS_ROOT}" -m ${MASS} -t -1 \
             --saveWorkspace --saveToys -n ${AS_EXT} -s 0 \
-            --setParameters r_tHq=1,r_ttH=1,MH=125.38 --freezeParameters MH
+            --setParameters r_tHq=1,r_ttH=1,MH=${MASS} --freezeParameters MH
     popd >/dev/null
   done
 fi
@@ -728,7 +738,7 @@ if [[ ${DO_BSM_FITS} -eq 1 ]]; then
       continue
     fi
     AS_EXT="${CPL}_Asimov${ASIMOV_SUFFIX}"
-    AS_TOY="${OUTPUT_BASE}/higgsCombine${AS_EXT}.GenerateOnly.mH125.38.0.root"
+    AS_TOY="${OUTPUT_BASE}/higgsCombine${AS_EXT}.GenerateOnly.mH${MASS}.0.root"
     if [[ -f "${AS_TOY}" ]]; then
       echo ">>> [BSM Asimov] Fitting ${CPL} Asimov with SM template"
       SM_EXT="${BSM_ASIMOV_TAG}"
@@ -745,9 +755,9 @@ if [[ ${DO_BSM_FITS} -eq 1 ]]; then
       python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode r_2D${MODE_SUFFIX} --batch local --ext ${SM_EXT_RUN} --outputDir .
       popd >/dev/null
       pushd "${OUTPUT_BASE}" >/dev/null
-      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT_RUN} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
+      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT_RUN} --mass ${MASS} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
       if [[ ${FINE_GRID} -eq 1 ]]; then
-        python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM_FINE}" --mode ${MODE} --ext ${SM_EXT_RUN} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
+        python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM_FINE}" --mode ${MODE} --ext ${SM_EXT_RUN} --mass ${MASS} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
       fi
       popd >/dev/null
     else
