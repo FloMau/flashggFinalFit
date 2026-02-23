@@ -3,6 +3,22 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# ------------------------------------------------------------------------------
+# Steps overview
+#   t2w    : build workspace root file from the datacard (needed once per datacard)
+#   init   : initial fit (defines the reference point for all impacts)
+#   fit    : one fit per nuisance parameter to compute its effect on each POI
+#   collect: gather fit outputs into impacts.json (optionally drop bkg params)
+#   plot   : make per-POI impact plots (optionally translate labels)
+#
+# Impacts are computed *relative to the initial fit point*. For Asimov (-t -1),
+# this means a small closure offset (e.g. r != 1) only shifts the reference
+# point; the impacts are still valid around that point. If you require the
+# reference point to be exactly r=1 (Asimov closure), you would need to
+# regenerate a postfit Asimov dataset and rerun the impacts on that dataset.
+# This script currently uses the standard combineTool Impacts workflow.
+# ------------------------------------------------------------------------------
+
 usage() {
   cat <<'EOF'
 Usage: runImpacts_tth_th.sh --steps <list> [options]

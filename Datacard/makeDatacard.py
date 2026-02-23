@@ -147,6 +147,77 @@ if opt.doSystematics:
   # Rename systematics
   for s in theory_systematics: s['title'] = renameSyst(s['title'],"scaleWeight","scale")
 
+  # Pool low-stat Higgs+heavy-flavor systematics across eras (per process, per category)
+  # Use pooled values later when writing the datacard.
+  pool_syst_names = {
+      'weight_Higgs_plus_b_syst_ggH',
+      'weight_Higgs_plus_c_syst_ggH',
+      'weight_Higgs_plus_b_syst_vbf',
+      'weight_Higgs_plus_c_syst_vbf',
+  }
+  if pool_syst_names:
+    years_list = opt.years.split(",")
+
+    # Build factory-type map (experimental + theory)
+    pooled_ftype = {}
+    pooled_ftype.update(experimentalFactoryType)
+    pooled_ftype.update(theoryFactoryType)
+
+    # Add helper columns for base proc/cat (strip year tags)
+    data['base_cat'] = data['cat']
+    data['base_proc'] = data['proc']
+    for y in years_list:
+      data['base_cat'] = data['base_cat'].str.replace(f"_{y}$", "", regex=True)
+      data['base_proc'] = data['base_proc'].str.replace(f"_{y}_hgg$", "", regex=True)
+
+    # Pooled event count across eras (per proc, per category)
+    if 'numEvents_pooled' not in data.columns:
+      data['numEvents_pooled'] = '-'
+
+    # Pooled systematic values
+    for sname in pool_syst_names:
+      col = f"{sname}_pooled"
+      if col not in data.columns:
+        data[col] = '-'
+
+    sig_mask = (data['type'] == 'sig')
+    grouped = data[sig_mask].groupby(['base_proc', 'base_cat'])
+    for (bproc, bcat), df in grouped:
+      # Sum nominal + numEvents across eras for this proc+category
+      nom_sum = pd.to_numeric(df['nominal_yield'], errors='coerce').sum()
+      num_sum = pd.to_numeric(df['numEvents'], errors='coerce').sum()
+      mask = sig_mask & (data['base_proc'] == bproc) & (data['base_cat'] == bcat)
+      data.loc[mask, 'numEvents_pooled'] = num_sum
+
+      for sname in pool_syst_names:
+        if sname not in pooled_ftype:
+          continue
+        ftype = pooled_ftype[sname]
+        pooled_val = None
+        if ftype in ['a_w', 'a_h']:
+          up_col = f"{sname}_up_yield"
+          down_col = f"{sname}_down_yield"
+          if up_col in df.columns and down_col in df.columns:
+            up_sum = pd.to_numeric(df[up_col], errors='coerce').sum()
+            down_sum = pd.to_numeric(df[down_col], errors='coerce').sum()
+            if nom_sum and nom_sum > 0:
+              pooled_val = [down_sum / nom_sum, up_sum / nom_sum]
+            else:
+              pooled_val = [1.0, 1.0]
+        else:
+          val_col = f"{sname}_yield"
+          if val_col in df.columns:
+            val_sum = pd.to_numeric(df[val_col], errors='coerce').sum()
+            if nom_sum and nom_sum > 0:
+              pooled_val = [val_sum / nom_sum]
+            else:
+              pooled_val = [1.0]
+
+        if pooled_val is not None:
+          # Assign the same object to all masked rows explicitly
+          idx = data.index[mask]
+          data.loc[mask, f"{sname}_pooled"] = pd.Series([pooled_val] * len(idx), index=idx)
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Pruning: if process contributes less than 0.1% of yield in analysis category then ignore

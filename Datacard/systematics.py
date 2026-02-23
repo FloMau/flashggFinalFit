@@ -141,10 +141,46 @@ theory_systematics = [
                 #{'name':'THU_qqH_JET01_qqH_cnstr','title':'STXS_constrain_THU_qqH_JET01','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':'theory_uncertainties/thu_qqh_stxs_constrain.json'},
                 #{'name':'pdf_Higgs_qqH_cnstr','title':'STXS_constrain_pdf_Higgs','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':'theory_uncertainties/thu_qqh_stxs_constrain.json'},
                 #{'name':'alphaS_qqH_cnstr','title':'STXS_constrain_alphaS','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':'theory_uncertainties/thu_qqh_stxs_constrain.json'}
+                # Interim 13.6 TeV xsec theory uncertainties (per process for scale; single NP for PDF/alphaS)
+                # Values are in theory_uncs_ad_interim_13p6TeV.json and mapped to ggh/vbf/vh/bbh in/out processes
+                {'name':'QCDscale_ggH','title':'QCDscale_ggH','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':'theory_uncertainties/theory_uncs_ad_interim_13p6TeV.json'},
+                {'name':'QCDscale_VBF','title':'QCDscale_VBF','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':'theory_uncertainties/theory_uncs_ad_interim_13p6TeV.json'},
+                {'name':'QCDscale_VH','title':'QCDscale_VH','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':'theory_uncertainties/theory_uncs_ad_interim_13p6TeV.json'},
+                {'name':'QCDscale_bbH','title':'QCDscale_bbH','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':'theory_uncertainties/theory_uncs_ad_interim_13p6TeV.json'},
+                # PDF and alphaS treated as single correlated NPs across processes (xsec-only)
+                {'name':'pdf_xsec','title':'pdf_xsec','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':'theory_uncertainties/theory_uncs_ad_interim_13p6TeV.json'},
+                {'name':'alphaS_xsec','title':'alphaS_xsec','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':'theory_uncertainties/theory_uncs_ad_interim_13p6TeV.json'},
               ]
-# PDF weight
-# For some reason, at the moment the LHEPdf weights are stored with `Pd` instead of `Pdf`, no idea why
-# for i in range(1,101): theory_systematics.append( {'name':'weight_LHEPd_%g'%i, 'title':'CMS_hgg_pdfWeight_%g'%i, 'type':'factory','prior':'lnN','correlateAcrossYears':1,'tiers':['shape']} )
+
+# Theory weights in the nominal RooDataSets (HiggsDNA naming)
+# LHE scale weights: use the conventional 6-point subset (skip 2,4,6)
+for i in (0, 1, 3, 5, 7, 8):
+  theory_systematics.append({
+    'name': f'weight_LHEScal_{i}',
+    'title': f'CMS_hgg_scaleWeight_{i}',
+    'type': 'factory',
+    'prior': 'lnN',
+    'correlateAcrossYears': 1,
+    'tiers': ['shape']
+  })
+
+# LHE PDF weights (1..100). Stored as weight_LHEPd_* in RooDataSets.
+for i in range(1, 101):
+  theory_systematics.append({
+    'name': f'weight_LHEPd_{i}',
+    'title': f'CMS_hgg_pdfWeight_{i}',
+    'type': 'factory',
+    'prior': 'lnN',
+    'correlateAcrossYears': 1,
+    'tiers': ['shape']
+  })
+
+# alphaS and PS weights
+theory_systematics.extend([
+  {'name':'weight_AlphaS','title':'CMS_hgg_AlphaS','type':'factory','prior':'lnN','correlateAcrossYears':1,'tiers':['shape']},
+  {'name':'weight_PS_ISR','title':'CMS_hgg_PS_ISR','type':'factory','prior':'lnN','correlateAcrossYears':1,'tiers':['shape']},
+  {'name':'weight_PS_FSR','title':'CMS_hgg_PS_FSR','type':'factory','prior':'lnN','correlateAcrossYears':1,'tiers':['shape']},
+])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -154,12 +190,9 @@ theory_systematics = [
 # correlateAcrossYears = -1 : partially correlated
 
 experimental_systematics = [
-                # Updated luminosity partial-correlation scheme: 13/5/21 (recommended simplified nuisances)
-                #{'name':'lumi_13TeV_Uncorrelated','title':'lumi_13TeV_Uncorrelated','type':'constant','prior':'lnN','correlateAcrossYears':0,'value':{'2016':'1.010','2017':'1.020','2018':'1.015'}},
-                #{'name':'lumi_13TeV_Correlated','title':'lumi_13TeV_Correlated','type':'constant','prior':'lnN','correlateAcrossYears':-1,'value':{'2016':'1.006','2017':'1.009','2018':'1.020'}},
-                #{'name':'lumi_13TeV_Correlated_1718','title':'lumi_13TeV_Correlated_1718','type':'constant','prior':'lnN','correlateAcrossYears':-1,'value':{'2016':'-','2017':'1.006','2018':'1.002'}},
-                {'name':'lumi_13p6TeV_2022','title':'lumi_13p6TeV_2022','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':"1.014"},
-                {'name':'lumi_13p6TeV_2023','title':'lumi_13p6TeV_2023','type':'constant','prior':'lnN','correlateAcrossYears':1,'value':"1.013"}, # merged unc for 2022+2023 is 1.2 %, could be done as in lumi_13TeV_Correlated
+                # Run-3 correlated luminosity scheme (reduction method)
+                {'name':'lumi_1','title':'lumi_1','type':'constant','prior':'lnN','correlateAcrossYears':-1,'value':{"2022preEE": "1.0138", "2022postEE": "1.0138", "2022": "1.0138", "2023preBPix": "1.0017", "2023postBPix": "1.0017", "2023": "1.0017", "2024": "1.0020"}},
+                {'name':'lumi_2','title':'lumi_2','type':'constant','prior':'lnN','correlateAcrossYears':-1,'value':{"2023preBPix": "1.0127", "2023postBPix": "1.0127", "2023": "1.0127", "2024": "1.0068"}},
                 # {'name':'weight_Pileup','title':'CMS_hgg_PileupWeight','type':'factory','prior':'lnN','correlateAcrossYears':1},
                 # {'name':'weight_TriggerSF','title':'CMS_hgg_TriggerWeight','type':'factory','prior':'lnN','correlateAcrossYears':1},
                 # {'name':'weight_ElectronVetoSF','title':'CMS_hgg_ElectronVetoSF','type':'factory','prior':'lnN','correlateAcrossYears':1},
@@ -203,6 +236,43 @@ experimental_systematics = [
                 #{'name':'JetHEM','title':'CMS_hgg_JetHEM','type':'factory','prior':'lnN','correlateAcrossYears':0}
               ]
 
+# Tree-based experimental systematics (Up/Down trees in Trees2WS config)
+experimental_systematics.extend([
+  {'name':'ElectronScale','title':'CMS_hgg_ElectronScale','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'ElectronSmearing','title':'CMS_hgg_ElectronSmearing','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'JecSystTotal','title':'CMS_scale_j','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'JerSyst','title':'CMS_res_j','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'METUnclustered','title':'CMS_hgg_MET_Unclustered','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'MuonResolution','title':'CMS_hgg_MuonResolution','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'MuonScale','title':'CMS_hgg_MuonScale','type':'factory','prior':'lnN','correlateAcrossYears':0},
+])
+
+# Weight-based experimental systematics (Up/Down weights in nominal RooDataSets)
+experimental_systematics.extend([
+  {'name':'weight_Pileup','title':'CMS_hgg_PileupWeight','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_TriggerSF','title':'CMS_hgg_TriggerWeight','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_ElectronVetoSF','title':'CMS_hgg_ElectronVetoSF','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'weight_PreselSF','title':'CMS_hgg_PreselSF','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_atLeast1LeptonIdSF_ele_Reco','title':'CMS_hgg_EleRecoSF','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'weight_atLeast1LeptonIdSF_ele_wp90iso','title':'CMS_hgg_EleWP90IsoSF','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'weight_atLeast1LeptonIdSF_mu_NUM_MediumID_DEN_TrackerMuons','title':'CMS_hgg_MuMediumIDSF','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'weight_atLeast1LeptonIdSF_mu_NUM_TightPFIso_DEN_MediumID','title':'CMS_hgg_MuTightPFIsoSF','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'weight_bTagSF_sys_cferr1','title':'CMS_hgg_bTagSF_sys_cferr1','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_bTagSF_sys_cferr2','title':'CMS_hgg_bTagSF_sys_cferr2','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_bTagSF_sys_hf','title':'CMS_hgg_bTagSF_sys_hf','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_bTagSF_sys_hfstats1','title':'CMS_hgg_bTagSF_sys_hfstats1','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'weight_bTagSF_sys_hfstats2','title':'CMS_hgg_bTagSF_sys_hfstats2','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'weight_bTagSF_sys_jes','title':'CMS_hgg_bTagSF_sys_jes','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_bTagSF_sys_lf','title':'CMS_hgg_bTagSF_sys_lf','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_bTagSF_sys_lfstats1','title':'CMS_hgg_bTagSF_sys_lfstats1','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  {'name':'weight_bTagSF_sys_lfstats2','title':'CMS_hgg_bTagSF_sys_lfstats2','type':'factory','prior':'lnN','correlateAcrossYears':0},
+  # ggH/VBF-specific Higgs+heavy-flavor variations (separate NPs per production mode)
+  {'name':'weight_Higgs_plus_b_syst_ggH','weight_name':'weight_Higgs_plus_b_syst','proc_match':'ggh','title':'CMS_hgg_Higgs_plus_b_syst_ggH','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_Higgs_plus_c_syst_ggH','weight_name':'weight_Higgs_plus_c_syst','proc_match':'ggh','title':'CMS_hgg_Higgs_plus_c_syst_ggH','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_Higgs_plus_b_syst_vbf','weight_name':'weight_Higgs_plus_b_syst','proc_match':'vbf','title':'CMS_hgg_Higgs_plus_b_syst_vbf','type':'factory','prior':'lnN','correlateAcrossYears':1},
+  {'name':'weight_Higgs_plus_c_syst_vbf','weight_name':'weight_Higgs_plus_c_syst','proc_match':'vbf','title':'CMS_hgg_Higgs_plus_c_syst_vbf','type':'factory','prior':'lnN','correlateAcrossYears':1},
+])
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Shape nuisances: effect encoded in signal model
@@ -211,11 +281,11 @@ experimental_systematics = [
 signal_shape_systematics = [
                 # {'name':'deltafracright','title':'deltafracright','type':'signal_shape','mode':'other','mean':'0.0','sigma':'0.02'},
                 # {'name':'scale','title':'scale','type':'signal_shape','mode':'scales','mean':'0.0','sigma':'1.0'},
-                # {'name':'ScaleEB','title':'ScaleEB','type':'signal_shape','mode':'scales','mean':'0.0','sigma':'1.0'},
-                # {'name':'ScaleEE','title':'ScaleEE','type':'signal_shape','mode':'scales','mean':'0.0','sigma':'1.0'},
-                # {'name':'Smearing','title':'Smearing','type':'signal_shape','mode':'smears','mean':'0.0','sigma':'1.0'},
-                # {'name':'Material','title':'Material','type':'signal_shape','mode':'scalesCorr','mean':'0.0','sigma':'1.0'},
-                # {'name':'FNUF','title':'FNUF','type':'signal_shape','mode':'scalesCorr','mean':'0.0','sigma':'1.0'},
+                {'name':'ScaleEB','title':'ScaleEB','type':'signal_shape','mode':'scales','mean':'0.0','sigma':'2.0'},
+                {'name':'ScaleEE','title':'ScaleEE','type':'signal_shape','mode':'scales','mean':'0.0','sigma':'2.0'},
+                {'name':'Smearing','title':'Smearing','type':'signal_shape','mode':'smears','mean':'0.0','sigma':'1.0'},
+                {'name':'Material','title':'Material','type':'signal_shape','mode':'scalesCorr','mean':'0.0','sigma':'1.0'},
+                {'name':'FNUF','title':'FNUF','type':'signal_shape','mode':'scalesCorr','mean':'0.0','sigma':'1.0'},
                 #{'name':'NonLinearity','title':'NonLinearity','type':'signal_shape','mode':'scalesGlobal','mean':'0.0','sigma':'0.005'},
                 #{'name':'Geant4','title':'Geant4','type':'signal_shape','mode':'scalesGlobal','mean':'0.0','sigma':'0.0005'},
                 #{'name':'HighR9EB','title':'HighR9EB','type':'signal_shape','mode':'scales','mean':'0.0','sigma':'1.0'},

@@ -12,17 +12,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Notes:
 #   - Yields are submitted to condor in this script.
 #   - Run --yields first, wait for jobs to finish, then run --datacards-only.
+#   - Use --syst to write outputs under *_syst analysis tag (keeps stat-only outputs untouched).
 
 ANALYSIS=${ANALYSIS:-tth_th_analysis_fiducial}
 ANALYSIS_SET=0
 RUN_YIELDS=0
 RUN_DATACARDS=0
 RUN_STEP_SET=0
-USE_NODECO=1
+USE_NODECO=0
+USE_SYST=0
 COUPLINGS_SET=${COUPLINGS_SET:-basic-bsm}
 
 global_ws_root=/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation
-BASE_WS_FID="${global_ws_root}/outputForFinalFits_24Jan2026_CP_penalty_30/workspaces_fiducial"
+BASE_WS_FID="${global_ws_root}/outputForFinalFits_12Feb2026/workspaces_fiducial"
 BASE_WS_FID_NODECO="${global_ws_root}/outputForFinalFits_06Feb2026_noDeco/workspaces_fiducial"
 BASE_WS="${BASE_WS_FID}"
 
@@ -35,6 +37,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --noDeco)
       USE_NODECO=1
+      shift 1
+      ;;
+    --syst)
+      USE_SYST=1
       shift 1
       ;;
     --yields)
@@ -83,6 +89,11 @@ export FIDUCIAL_FRACTIONS_YAML="$FIDUCIAL_YAML"
 if [[ ${USE_NODECO} -eq 1 && ${ANALYSIS_SET} -eq 0 ]]; then
   if [[ "${ANALYSIS}" != *noDeco* ]]; then
     ANALYSIS="${ANALYSIS}_noDeco"
+  fi
+fi
+if [[ ${USE_SYST} -eq 1 ]]; then
+  if [[ "${ANALYSIS}" != *_syst* ]]; then
+    ANALYSIS="${ANALYSIS}_syst"
   fi
 fi
 
@@ -141,31 +152,37 @@ esac
 # RUN_MODES="KT0KTT0"
 
 
+# Base ext label (per coupling gets appended below)
+EXT_BASE_CORE="tth_th_analysis_fiducial"
+
 for LABEL in ${RUN_MODES}; do
     case "$LABEL" in
-        SM)           PROCS="$PROCS_SM"           EXT_BASE="tth_th_analysis_fiducial"          CP_LABEL="SM" ;;
-        CPODD)        PROCS="$PROCS_CPODD"        EXT_BASE="tth_th_analysis_fiducial"          CP_LABEL="CPodd" ;;
-        KTM1KTT0)     PROCS="$PROCS_KTM1KTT0"     EXT_BASE="tth_th_analysis_fiducial"          CP_LABEL="Ktm1Ktt0" ;;
-        KT0P7KTT0P7)  PROCS="$PROCS_KT0P7KTT0P7"  EXT_BASE="tth_th_analysis_fiducial"          CP_LABEL="Kt0p7Ktt0p7" ;;
-        KT0P7KTTM0P7) PROCS="$PROCS_KT0P7KTTM0P7" EXT_BASE="tth_th_analysis_fiducial"          CP_LABEL="Kt0p7Kttm0p7" ;;
-        KT0KTTM1)     PROCS="$PROCS_KT0KTTM1"     EXT_BASE="tth_th_analysis_fiducial"          CP_LABEL="Kt0Kttm1" ;;
-        KT0KTT0)      PROCS="$PROCS_KT0KTT0"      EXT_BASE="tth_th_analysis_fiducial"          CP_LABEL="Kt0Ktt0" ;;
-        KT0P500KTT0P000) PROCS="$PROCS_KT0P500KTT0P000" EXT_BASE="tth_th_analysis_fiducial"    CP_LABEL="Kt0p500Ktt0p000" ;;
-        KT0P354KTT0P354) PROCS="$PROCS_KT0P354KTT0P354" EXT_BASE="tth_th_analysis_fiducial"    CP_LABEL="Kt0p354Ktt0p354" ;;
-        KT0P000KTT0P500) PROCS="$PROCS_KT0P000KTT0P500" EXT_BASE="tth_th_analysis_fiducial"    CP_LABEL="Kt0p000Ktt0p500" ;;
-        KTM0P500KTT0P000) PROCS="$PROCS_KTM0P500KTT0P000" EXT_BASE="tth_th_analysis_fiducial"  CP_LABEL="Ktm0p500Ktt0p000" ;;
-        KT0P000KTTM0P500) PROCS="$PROCS_KT0P000KTTM0P500" EXT_BASE="tth_th_analysis_fiducial"  CP_LABEL="Kt0p000Kttm0p500" ;;
-        KT0P354KTTM0P354) PROCS="$PROCS_KT0P354KTTM0P354" EXT_BASE="tth_th_analysis_fiducial"  CP_LABEL="Kt0p354Kttm0p354" ;;
-        KT1P500KTT0P000) PROCS="$PROCS_KT1P500KTT0P000" EXT_BASE="tth_th_analysis_fiducial"    CP_LABEL="Kt1p500Ktt0p000" ;;
-        KT1P061KTT1P061) PROCS="$PROCS_KT1P061KTT1P061" EXT_BASE="tth_th_analysis_fiducial"    CP_LABEL="Kt1p061Ktt1p061" ;;
-        KT0P000KTT1P500) PROCS="$PROCS_KT0P000KTT1P500" EXT_BASE="tth_th_analysis_fiducial"    CP_LABEL="Kt0p000Ktt1p500" ;;
-        KTM1P500KTT0P000) PROCS="$PROCS_KTM1P500KTT0P000" EXT_BASE="tth_th_analysis_fiducial"  CP_LABEL="Ktm1p500Ktt0p000" ;;
-        KT0P000KTTM1P500) PROCS="$PROCS_KT0P000KTTM1P500" EXT_BASE="tth_th_analysis_fiducial"  CP_LABEL="Kt0p000Kttm1p500" ;;
-        KT1P061KTTM1P061) PROCS="$PROCS_KT1P061KTTM1P061" EXT_BASE="tth_th_analysis_fiducial"  CP_LABEL="Kt1p061Kttm1p061" ;;
+        SM)           PROCS="$PROCS_SM"           EXT_BASE="${EXT_BASE_CORE}"          CP_LABEL="SM" ;;
+        CPODD)        PROCS="$PROCS_CPODD"        EXT_BASE="${EXT_BASE_CORE}"          CP_LABEL="CPodd" ;;
+        KTM1KTT0)     PROCS="$PROCS_KTM1KTT0"     EXT_BASE="${EXT_BASE_CORE}"          CP_LABEL="Ktm1Ktt0" ;;
+        KT0P7KTT0P7)  PROCS="$PROCS_KT0P7KTT0P7"  EXT_BASE="${EXT_BASE_CORE}"          CP_LABEL="Kt0p7Ktt0p7" ;;
+        KT0P7KTTM0P7) PROCS="$PROCS_KT0P7KTTM0P7" EXT_BASE="${EXT_BASE_CORE}"          CP_LABEL="Kt0p7Kttm0p7" ;;
+        KT0KTTM1)     PROCS="$PROCS_KT0KTTM1"     EXT_BASE="${EXT_BASE_CORE}"          CP_LABEL="Kt0Kttm1" ;;
+        KT0KTT0)      PROCS="$PROCS_KT0KTT0"      EXT_BASE="${EXT_BASE_CORE}"          CP_LABEL="Kt0Ktt0" ;;
+        KT0P500KTT0P000) PROCS="$PROCS_KT0P500KTT0P000" EXT_BASE="${EXT_BASE_CORE}"    CP_LABEL="Kt0p500Ktt0p000" ;;
+        KT0P354KTT0P354) PROCS="$PROCS_KT0P354KTT0P354" EXT_BASE="${EXT_BASE_CORE}"    CP_LABEL="Kt0p354Ktt0p354" ;;
+        KT0P000KTT0P500) PROCS="$PROCS_KT0P000KTT0P500" EXT_BASE="${EXT_BASE_CORE}"    CP_LABEL="Kt0p000Ktt0p500" ;;
+        KTM0P500KTT0P000) PROCS="$PROCS_KTM0P500KTT0P000" EXT_BASE="${EXT_BASE_CORE}"  CP_LABEL="Ktm0p500Ktt0p000" ;;
+        KT0P000KTTM0P500) PROCS="$PROCS_KT0P000KTTM0P500" EXT_BASE="${EXT_BASE_CORE}"  CP_LABEL="Kt0p000Kttm0p500" ;;
+        KT0P354KTTM0P354) PROCS="$PROCS_KT0P354KTTM0P354" EXT_BASE="${EXT_BASE_CORE}"  CP_LABEL="Kt0p354Kttm0p354" ;;
+        KT1P500KTT0P000) PROCS="$PROCS_KT1P500KTT0P000" EXT_BASE="${EXT_BASE_CORE}"    CP_LABEL="Kt1p500Ktt0p000" ;;
+        KT1P061KTT1P061) PROCS="$PROCS_KT1P061KTT1P061" EXT_BASE="${EXT_BASE_CORE}"    CP_LABEL="Kt1p061Ktt1p061" ;;
+        KT0P000KTT1P500) PROCS="$PROCS_KT0P000KTT1P500" EXT_BASE="${EXT_BASE_CORE}"    CP_LABEL="Kt0p000Ktt1p500" ;;
+        KTM1P500KTT0P000) PROCS="$PROCS_KTM1P500KTT0P000" EXT_BASE="${EXT_BASE_CORE}"  CP_LABEL="Ktm1p500Ktt0p000" ;;
+        KT0P000KTTM1P500) PROCS="$PROCS_KT0P000KTTM1P500" EXT_BASE="${EXT_BASE_CORE}"  CP_LABEL="Kt0p000Kttm1p500" ;;
+        KT1P061KTTM1P061) PROCS="$PROCS_KT1P061KTTM1P061" EXT_BASE="${EXT_BASE_CORE}"  CP_LABEL="Kt1p061Kttm1p061" ;;
         *) echo "Unknown RUN_MODE label '${LABEL}'" >&2; exit 1 ;;
     esac
     if [[ ${USE_NODECO} -eq 1 ]]; then
         EXT_BASE="${EXT_BASE}_noDeco"
+    fi
+    if [[ ${USE_SYST} -eq 1 ]]; then
+        EXT_BASE="${EXT_BASE}_syst"
     fi
     case "$LABEL" in
         SM) EXT="${EXT_BASE}" ;;

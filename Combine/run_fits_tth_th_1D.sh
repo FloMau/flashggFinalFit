@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# NOTE ON ASIMOV SNAPSHOT USAGE
+# - For Asimov scans, a postfit snapshot is REQUIRED.
+# - The script will NOT auto-run the snapshot step; run it explicitly.
+# - For observed data (--no-asimov), no snapshot is used.
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
@@ -9,6 +14,7 @@ Usage: run_fits_tth_th_1D.sh --steps <list> [options]
 
 Steps (comma-separated):
   t2w        build workspace in Combine/output/<analysis-tag>
+  snapshot   fit Asimov once and save snapshot (mandatory for Asimov scans)
   scan       1D scans with full systematics (profiled other POI)
   scan-stat  1D scans with stat-only (freeze all constrained nuisances)
   collect    CollectFits for syst + stat-only
@@ -30,7 +36,8 @@ Options:
   -h, --help               Show help
 
 Examples:
-  bash run_fits_tth_th_1D.sh --steps t2w,scan,scan-stat,collect,plot
+  bash run_fits_tth_th_1D.sh --steps t2w,snapshot,scan,scan-stat,collect,plot
+  # If snapshot already exists:
   bash run_fits_tth_th_1D.sh --steps scan,scan-stat
 EOM
 }
@@ -103,6 +110,7 @@ mkdir -p "${WORKDIR}"
 
 JSON_SYST="${WORKDIR}/inputs_1D_syst.json"
 JSON_STAT="${WORKDIR}/inputs_1D_stat.json"
+SNAPSHOT_WS="${WORKDIR}/higgsCombine_AsimovPostfit.MultiDimFit.mH${MASS}.root"
 
 python3 - <<PY
 import json
@@ -113,12 +121,13 @@ pois = "${POIS}".split(",")
 points = "${POINTS}:${SPLIT_POINTS}"
 range_r_thq = "${RANGE_R_THQ}"
 range_r_tth = "${RANGE_R_TTH}"
+mass = "${MASS}"
 
 def build_entry(statonly=False):
     fits = []
     points_list = []
     fit_opts = []
-    base_opts = f"--freezeParameters MH --setParameterRanges r_tHq={range_r_thq}:r_ttH={range_r_tth} --saveSpecifiedNuis all"
+    base_opts = f"--freezeParameters MH --setParameters MH={mass},r_tHq=1,r_ttH=1 --setParameterRanges r_tHq={range_r_thq}:r_ttH={range_r_tth} --saveSpecifiedNuis all"
     if statonly:
         base_opts = base_opts.replace("--freezeParameters MH", "--freezeParameters MH,allConstrainedNuisances")
     for p in pois:
@@ -157,15 +166,58 @@ if [[ -n "${DO[t2w]:-}" ]]; then
   (cd "${OUTPUT_BASE}" && python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode "${MODE}" --batch local --ext "${ANALYSIS_TAG}")
 fi
 
+run_snapshot() {
+  if [[ ! -f "${OUTPUT_BASE}/Datacard_${ANALYSIS_TAG}.root" ]]; then
+    echo "[ERROR] Missing ${OUTPUT_BASE}/Datacard_${ANALYSIS_TAG}.root. Run --steps t2w first." >&2
+    exit 1
+  fi
+  (cd "${WORKDIR}" && combine -M MultiDimFit "${OUTPUT_BASE}/Datacard_${ANALYSIS_TAG}.root" -m "${MASS}" -t -1 \
+    --setParameters r_tHq=1,r_ttH=1,MH="${MASS}" --freezeParameters MH \
+    --saveWorkspace --saveFitResult -n _AsimovPostfit \
+    -P r_tHq -P r_ttH --floatOtherPOIs 1 \
+    --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants \
+    --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2)
+  if [[ ! -f "${SNAPSHOT_WS}" ]]; then
+    echo "[ERROR] Snapshot not found at ${SNAPSHOT_WS}" >&2
+    exit 1
+  fi
+}
+
+ensure_snapshot() {
+  if [[ ${ASIMOV} -ne 1 ]]; then
+    return 0
+  fi
+  if [[ ! -f "${SNAPSHOT_WS}" ]]; then
+    echo "[INFO] Snapshot missing. Running snapshot step first..."
+    run_snapshot
+  fi
+}
+
+if [[ -n "${DO[snapshot]:-}" ]]; then
+  run_snapshot
+fi
+
+SNAPSHOT_OPTS=""
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    # Only attach the snapshot if it already exists; do not auto-run it here.
+    if [[ -f "${SNAPSHOT_WS}" ]]; then
+      SNAPSHOT_OPTS="--snapshotWSFile ${SNAPSHOT_WS}"
+    else
+      echo "[WARN] Snapshot missing at ${SNAPSHOT_WS}. Run --steps snapshot first (or include it in the same command)."
+    fi
+  fi
+
 if [[ -n "${DO[scan]:-}" ]]; then
+  ensure_snapshot
   (cd "${WORKDIR}" && python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${JSON_SYST}" --mode "${MODE}" \
-    --mass "${MASS}" --queue "${QUEUE}" --batch condor --datacardDir "${OUTPUT_BASE}" --ext "${EXT}" ${ASIMOV_FLAG} \
+    --mass "${MASS}" --queue "${QUEUE}" --batch condor --datacardDir "${OUTPUT_BASE}" --ext "${EXT}" ${ASIMOV_FLAG} ${SNAPSHOT_OPTS} \
     --subOpts "${SUB_OPTS}")
 fi
 
 if [[ -n "${DO[scan-stat]:-}" ]]; then
+  ensure_snapshot
   (cd "${WORKDIR}" && python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${JSON_STAT}" --mode "${MODE}" \
-    --mass "${MASS}" --queue "${QUEUE}" --batch condor --datacardDir "${OUTPUT_BASE}" --ext "${EXT}" ${ASIMOV_FLAG} \
+    --mass "${MASS}" --queue "${QUEUE}" --batch condor --datacardDir "${OUTPUT_BASE}" --ext "${EXT}" ${ASIMOV_FLAG} ${SNAPSHOT_OPTS} \
     --subOpts "${SUB_OPTS}")
 fi
 

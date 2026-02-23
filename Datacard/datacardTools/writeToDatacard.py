@@ -1,5 +1,5 @@
 # Hold defs of writing functions for datacard
-import os, sys, re
+import os, sys, re, math, numbers
 from commonTools import *
 from commonObjects import *
 
@@ -229,7 +229,30 @@ def writeSystematic(f,d,s,options,stxsMergeScheme=None,scaleCorrScheme=None):
             if r['proc'] == "data_obs": continue
             # Extract value and add to line (with checks)
             sval = r["%s%s%s"%(s['name'],mergeStr,tierStr)]
-            lsyst = addSyst(lsyst,sval,stitle,r['proc'],cat,r['numEvents'])
+            nval = r['numEvents']
+            # Pool Higgs+heavy-flavor systematics across eras (per proc+category)
+            pool_syst_names = {
+              'weight_Higgs_plus_b_syst_ggH',
+              'weight_Higgs_plus_c_syst_ggH',
+              'weight_Higgs_plus_b_syst_vbf',
+              'weight_Higgs_plus_c_syst_vbf',
+            }
+            pool_min_events = 90
+            if s['name'] in pool_syst_names:
+              pooled_col = f"{s['name']}_pooled"
+              n_pool = r.get('numEvents_pooled', nval)
+              try:
+                n_pool_f = float(n_pool)
+              except Exception:
+                n_pool_f = None
+              if (n_pool_f is not None) and (n_pool_f >= pool_min_events):
+                if pooled_col in r and r[pooled_col] != '-':
+                  sval = r[pooled_col]
+                  nval = n_pool_f
+              else:
+                sval = "-"
+                nval = n_pool_f if n_pool_f is not None else nval
+            lsyst = addSyst(lsyst,sval,stitle,r['proc'],cat,nval)
             # code.interact(local=locals())
         # Remove final space from line and add to file
         f.write("%s\n"%lsyst[:-1])
@@ -265,7 +288,30 @@ def writeSystematic(f,d,s,options,stxsMergeScheme=None,scaleCorrScheme=None):
               if r['proc'] == "data_obs": continue
               # Extract value and add to line (with checks)
               sval = r[sname]
-              lsyst = addSyst(lsyst,sval,stitle,r['proc'],cat,r['numEvents'])
+              nval = r['numEvents']
+              # Pool Higgs+heavy-flavor systematics across eras (per proc+category)
+              pool_syst_names = {
+                'weight_Higgs_plus_b_syst_ggH',
+                'weight_Higgs_plus_c_syst_ggH',
+                'weight_Higgs_plus_b_syst_vbf',
+                'weight_Higgs_plus_c_syst_vbf',
+              }
+              pool_min_events = 90
+              if s['name'] in pool_syst_names:
+                pooled_col = f"{s['name']}_pooled"
+                n_pool = r.get('numEvents_pooled', nval)
+                try:
+                  n_pool_f = float(n_pool)
+                except Exception:
+                  n_pool_f = None
+                if (n_pool_f is not None) and (n_pool_f >= pool_min_events):
+                  if pooled_col in r and r[pooled_col] != '-':
+                    sval = r[pooled_col]
+                    nval = n_pool_f
+                else:
+                  sval = "-"
+                  nval = n_pool_f if n_pool_f is not None else nval
+              lsyst = addSyst(lsyst,sval,stitle,r['proc'],cat,nval)
           # Remove final space from line and add to file
           f.write("%s\n"%lsyst[:-1])
   return True
@@ -274,8 +320,34 @@ def writeSystematic(f,d,s,options,stxsMergeScheme=None,scaleCorrScheme=None):
 def addSyst(l,v,s,p,c,n):
   #l-systematic line, v-value, s-systematic title, p-proc, c-cat, n-numEvents
   minEventNumber = 100
+  # For pooled Higgs+heavy-flavor systematics we already enforce a 90-event
+  # threshold across eras; use the same threshold here to avoid double-pruning.
+  if ("Higgs_plus_b_syst" in s) or ("Higgs_plus_c_syst" in s):
+    minEventNumber = 90
+  # Cap extreme lnN variations to keep pathological weights under control.
+  cap_min = 0.05
+  cap_max = 2.0
+  def _cap_lnN(val):
+    try:
+      v = float(val)
+    except Exception:
+      return val
+    if v < cap_min:
+      print(" --> [WARNING] systematic %s: value %.3f for (%s,%s) capped to %.3f" % (s, v, p, c, cap_min))
+      return cap_min
+    if v > cap_max:
+      print(" --> [WARNING] systematic %s: value %.3f for (%s,%s) capped to %.3f" % (s, v, p, c, cap_max))
+      return cap_max
+    return v
   if type(v) is str: 
     l += "%-15s "%v
+    return l
+  elif isinstance(v, numbers.Real):
+    # Allow numeric values (e.g. constants from JSON) to pass through
+    if math.isnan(v):
+      l += "%-15s "%"-"
+    else:
+      l += "%-15.3f "%v
     return l
   elif type(v) is list: 
     # Symmetric:
@@ -284,40 +356,58 @@ def addSyst(l,v,s,p,c,n):
       if abs(v[0]-1)<0.0005: l += "%-15s "%"-"
       # If number of events smaller than minEventNumber add - to datacard
       elif (n < minEventNumber) and (not ('lumi' in s)): l += "%-15s "%"-"
-      # Check 2: variation is not negative. Print message and add - to datacard (cleaned later)
-      elif v[0] < 0.: 
-        print(" --> [WARNING] systematic %s: negative variation for (%s,%s)"%(s,p,c))
+      # Check 2: variation is not non-positive. Print message and add - to datacard (cleaned later)
+      elif v[0] <= 0.: 
+        print(" --> [WARNING] systematic %s: non-positive variation for (%s,%s)"%(s,p,c))
         #vstr = "%s"%v[0]
         vstr = "-"
         # l += "%-15s "%v[0] # After discussion on the 10.04.24
         l += "%-15s "%vstr
       else:
-        l += "%-15.3f "%v[0]
+        v0 = _cap_lnN(v[0])
+        l += "%-15.3f "%v0
     # Anti-symmetirc
     if len(v) == 2:
       # Check 1: variation is non-negligible. If not then skip
       if(abs(v[0]-1)<0.0005)&(abs(v[1]-1)<0.0005): l += "%-15s "%"-"
       # If number of events smaller than minEventNumber add - to datacard
       elif (n < minEventNumber) and (not ('lumi' in s)): l += "%-15s "%"-"
-      # Check 2: neither variation is negative. Print message and add - to datacard (cleaned later)
-      elif(v[0]<0.)|(v[1]<0.):
-        print(" --> [WARNING] systematic %s: negative variation for (%s,%s)"%(s,p,c))
-        #vstr = "%.3f/%.3f"%(v[0],v[1])
-        vstr = "-"
-        l += "%-15s "%vstr
+      # Check 2: neither variation is non-positive. If one side is non-positive,
+      # mirror the other side to keep a symmetric lnN instead of dropping it.
+      elif(v[0] <= 0.)|(v[1] <= 0.):
+        if (v[0] <= 0.) != (v[1] <= 0.) and (v[0] > 0. or v[1] > 0.):
+          v0, v1 = v[0], v[1]
+          if v0 <= 0. and v1 > 0.:
+            v0 = 1.0 / v1
+          elif v1 <= 0. and v0 > 0.:
+            v1 = 1.0 / v0
+          v0 = _cap_lnN(v0)
+          v1 = _cap_lnN(v1)
+          print(" --> [WARNING] systematic %s: non-positive variation for (%s,%s) -> mirrored to %.3f/%.3f" % (s, p, c, v0, v1))
+          vstr = "%.3f/%.3f"%(v0,v1)
+          l += "%-15s "%vstr
+        else:
+          print(" --> [WARNING] systematic %s: non-positive variation for (%s,%s)"%(s,p,c))
+          #vstr = "%.3f/%.3f"%(v[0],v[1])
+          vstr = "-"
+          l += "%-15s "%vstr
       # Check 3: effect is approximately symmetric: then just add single up variation
-      elif( abs((v[0]*v[1])-1)<0.0005 ): l += "%-15.3f "%v[1]
+      elif( abs((v[0]*v[1])-1)<0.0005 ):
+        v1 = _cap_lnN(v[1])
+        l += "%-15.3f "%v1
       else: 
         if (n < minEventNumber) and (not ('lumi' in s)): 
           l += "%-15s "%"-"
         else:
-          vstr = "%.3f/%.3f"%(v[0],v[1])
+          v0 = _cap_lnN(v[0])
+          v1 = _cap_lnN(v[1])
+          vstr = "%.3f/%.3f"%(v0,v1)
           if s == "CMS_hgg_SigmaEOverEShift":
             print(vstr, p, c, n)
           l += "%-15s "%vstr
     return l
   else:
-    print(" --> [ERROR] systematic %s: value does not have type string or list for (%s,%s). Leaving..."%(s['title'],p,c))
+    print(" --> [ERROR] systematic %s: value does not have type string or list for (%s,%s). Leaving..."%(s,p,c))
     sys.exit(1)
 
 def writeMCStatUncertainty(f,d,options):

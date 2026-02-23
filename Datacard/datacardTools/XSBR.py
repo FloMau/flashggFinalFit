@@ -99,6 +99,11 @@ def initialiseXSBR(mass='125'):
 def extractXSBR(d,mass='125',analysis='STXS'):
   # Import cross sections and branching ratios from combine
   xsbr = initialiseXSBR(mass)
+  # Allow syst-tagged analyses to reuse the base XSBR map
+  if analysis not in XSBRMap and analysis.endswith("_syst"):
+    base_analysis = analysis[:-5]
+    if base_analysis in XSBRMap:
+      analysis = base_analysis
   # Define map of procs to XS,BR
   XSBR_for_analysis = od()
 

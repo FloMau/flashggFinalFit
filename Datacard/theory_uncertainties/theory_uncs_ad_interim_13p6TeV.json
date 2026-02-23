@@ -1,0 +1,58 @@
+{
+  "_meta": {
+    "source": "AD interim 13.6 TeV values from https://arxiv.org/abs/2402.09955",
+    "units": {
+      "XS_pb": "pb"
+    }
+  },
+  "ggh_in": {
+    "QCDscale_ggH": [1.046, 0.93],
+    "pdf_xsec": 1.019,
+    "alphaS_xsec": 1.026
+  },
+  "ggh_out": {
+    "QCDscale_ggH": [1.046, 0.93],
+    "pdf_xsec": 1.019,
+    "alphaS_xsec": 1.026
+  },
+  "vbf_in": {
+    "QCDscale_VBF": [1.005, 0.997],
+    "pdf_xsec": 1.021,
+    "alphaS_xsec": 1.005
+  },
+  "vbf_out": {
+    "QCDscale_VBF": [1.005, 0.997],
+    "pdf_xsec": 1.021,
+    "alphaS_xsec": 1.005
+  },
+  "vh_in": {
+    "QCDscale_VH": [1.017, 0.983],
+    "pdf_xsec": 1.015,
+    "alphaS_xsec": 1.009
+  },
+  "vh_out": {
+    "QCDscale_VH": [1.017, 0.983],
+    "pdf_xsec": 1.015,
+    "alphaS_xsec": 1.009
+  },
+  "wh_incl": {
+    "QCDscale_VH": [1.004, 0.993],
+    "pdf_xsec": 1.016,
+    "alphaS_xsec": 1.009
+  },
+  "zh_incl": {
+    "QCDscale_VH": [1.038, 0.968],
+    "pdf_xsec": 1.013,
+    "alphaS_xsec": 1.009
+  },
+  "bbh_in": {
+    "QCDscale_bbH": [1.05, 0.95],
+    "pdf_xsec": 1.021,
+    "alphaS_xsec": 1.000
+  },
+  "bbh_out": {
+    "QCDscale_bbH": [1.05, 0.95],
+    "pdf_xsec": 1.021,
+    "alphaS_xsec": 1.000
+  }
+}

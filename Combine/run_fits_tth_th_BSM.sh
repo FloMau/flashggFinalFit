@@ -5,10 +5,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Steps:
 #   0 / models      : sync signal/background Models into output/<analysis>/Models
-#   1 / asimov-sm   : build the SM Asimov dataset
-#   2 / smfits      : fit SM Asimov with each BSM template
+#   1 / asimov-sm   : build the SM Asimov dataset (for non-SM AsimovLabel use step 3)
+#   1b / asimov-postfit : fit AsimovLabel dataset once and save snapshot (for postfit Asimov regeneration)
+#   1c / asimov-regen   : regenerate AsimovLabel dataset from postfit snapshot (r=1)
+#   2 / typeA (alias: smfits) : fixed AsimovLabel dataset (postfit-regenerated), scan over signal models (--couplings)
 #   3 / bsmasimov   : build BSM Asimov datasets
-#   4 / bsmfit      : fit each BSM Asimov with the SM template
+#   3b / bsm-postfit: fit each BSM Asimov with its own signal model and save snapshot
+#   3c / bsm-regen  : regenerate each BSM Asimov dataset from its postfit snapshot (r=1)
+#   4 / bsmfit (Type-B): fixed SM signal model, scan over datasets (postfit-regenerated BSM Asimovs)
 #   5 / plot        : collect and plot 2D scans
 #
 # Prerequisites:
@@ -43,22 +47,25 @@ print_usage() {
 Usage: run_fits_tth_th_BSM.sh --step <list>
   --step/--steps accepts comma-separated values (names or numbers):
     0 / models
-    1 / asimov-sm (or other asimovLabel option), scanning over fits with different signal models
-    2 / smfits
-    3 / bsmasimov, fit with SM signal model
-    4 / bsmfit
+    1 / asimov-sm (SM only; for non-SM AsimovLabel use step 3)
+    1b / asimov-postfit (fit AsimovLabel dataset once, save snapshot)
+    1c / asimov-regen (regenerate AsimovLabel dataset from snapshot, r=1)
+    2 / typeA (alias: smfits) (fixed AsimovLabel dataset, scan signal models from --couplings)
+    3 / bsmasimov (build each BSM Asimov dataset)
+    3b / bsm-postfit (fit each BSM Asimov with its own model, save snapshot)
+    3c / bsm-regen (regenerate each BSM Asimov from snapshot, r=1)
+    4 / bsmfit (Type-B: fixed SM signal model, scan regenerated BSM Asimov datasets)
     5 / plot
   Example: --steps 0,1,5
   Optional:
-    --fine-grid   run an additional fine 2D scan in the same output directory
-    --setPdfIndices  freeze discrete pdfindex nuisances using defaults in workspace
+    --asimov-snapshot <path>  override SM Asimov snapshot root file path
     --noDeco      use noDeco analysis tag and model paths
     --syst        use syst datacards and signal models (appends _syst to analysis tag)
     --asimovLabel <SM|CPodd|Ktm1Ktt0|...>  use this Asimov dataset for type-A scans (default: SM)
     --couplings <basic-bsm|extended-bsm|sm-only|all>  select coupling set (default: basic-bsm), affects steps 2, 3, 4, 5
     --max-materialize <N>  pass Condor max_materialize to RunFits submissions
   example for step 5:
-    bash run_fits_tth_th_BSM.sh --step 5 --asimovLabel CPodd --setPdfIndices
+    bash run_fits_tth_th_BSM.sh --step 5 --asimovLabel CPodd
 EOF
 }
 
@@ -68,6 +75,7 @@ COUPLINGS_SET="basic-bsm"
 MAX_MATERIALIZE=""
 USE_SYST=0
 MASS=125.08
+ASIMOV_SNAPSHOT_OVERRIDE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --step|--steps)
@@ -82,13 +90,13 @@ while [[ $# -gt 0 ]]; do
       STEPS_RAW="0,1,2,3,4,5"
       shift 1
       ;;
-    --fine-grid)
-      FINE_GRID=1
+    --use-asimov-snapshot)
+      echo "[INFO] --use-asimov-snapshot is now the default; ignoring." >&2
       shift 1
       ;;
-    --setPdfIndices)
-      SET_PDFINDICES=1
-      shift 1
+    --asimov-snapshot)
+      ASIMOV_SNAPSHOT_OVERRIDE="$2"
+      shift 2
       ;;
     --noDeco)
       USE_NODECO=1
@@ -139,12 +147,14 @@ fi
 
 DO_SYNC_MODELS=0
 DO_ASIMOV_SM=0
+DO_ASIMOV_POSTFIT=0
+DO_ASIMOV_REGEN=0
 DO_SM_FITS=0
 DO_BSM_ASIMOV=0
+DO_BSM_POSTFIT=0
+DO_BSM_REGEN=0
 DO_BSM_FITS=0
 DO_PLOT=0
-FINE_GRID=${FINE_GRID:-0}
-SET_PDFINDICES=${SET_PDFINDICES:-0}
 
 IFS=',' read -ra STEP_LIST <<< "${STEPS_RAW}"
 for step in "${STEP_LIST[@]}"; do
@@ -152,8 +162,12 @@ for step in "${STEP_LIST[@]}"; do
   case "${step}" in
     0|models|sync-models|sync_models) DO_SYNC_MODELS=1 ;;
     1|asimov|asimov-sm|sm_asimov) DO_ASIMOV_SM=1 ;;
-    2|smfits|fit-sm|fit-sm-asimov) DO_SM_FITS=1 ;;
+    1b|asimov-postfit|asimov_postfit|postfit|snapshot) DO_ASIMOV_POSTFIT=1 ;;
+    1c|asimov-regen|asimov_regen|regen|postfit-asimov) DO_ASIMOV_REGEN=1 ;;
+    2|typeA|typea|smfits|fit-sm|fit-sm-asimov) DO_SM_FITS=1 ;;
     3|bsmasimov|asimov-bsm|bsm-asimov) DO_BSM_ASIMOV=1 ;;
+    3b|bsm-postfit|bsm_postfit|postfit-bsm) DO_BSM_POSTFIT=1 ;;
+    3c|bsm-regen|bsm_regen|regen-bsm) DO_BSM_REGEN=1 ;;
     4|bsmfit|fit-bsm|fit-bsm-asimov) DO_BSM_FITS=1 ;;
     5|plot|plots) DO_PLOT=1 ;;
     *)
@@ -193,15 +207,11 @@ fi
 if [[ ${USE_SYST} -eq 1 ]]; then
   ANALYSIS_TAG="${ANALYSIS_TAG}_syst"
 fi
-PDFIDX_SUFFIX=""
-RUNFITS_PDFOPTS=""
-if [[ ${SET_PDFINDICES} -eq 1 ]]; then
-  PDFIDX_SUFFIX="_pdfidx"
-  RUNFITS_PDFOPTS="--setPdfIndices"
-fi
 INPUT_JSON_BASE="${SCRIPT_DIR}/inputs_statonly_tth_th.json"
 OUTPUT_BASE="${SCRIPT_DIR}/output/${ANALYSIS_TAG}"
 mkdir -p "${OUTPUT_BASE}"
+SNAPSHOT_DIR="${OUTPUT_BASE}/snapshots"
+mkdir -p "${SNAPSHOT_DIR}"
 SCALED_JSON_DIR="${OUTPUT_BASE}/inputs_scaled"
 mkdir -p "${SCALED_JSON_DIR}"
 DATACARD_BASE="${SCRIPT_DIR}/../Datacard/datacard_outputs/${ANALYSIS_TAG}"
@@ -221,30 +231,29 @@ if [[ "${ANALYSIS_TAG}" == *"_fiducial"* ]]; then
 fi
 MODEL_SRC_BACKGROUND="${MODEL_SRC_BACKGROUND:-${DEFAULT_BKG_DIR}}"
 
-if [[ ${SET_PDFINDICES} -eq 1 ]]; then
-  echo "[INFO] --setPdfIndices enabled; freezing pdfindex parameters from workspace defaults"
-fi
+echo "[INFO] Type-A scans use regenerated postfit Asimov dataset (auto-built when missing)."
 
 SM_ASIMOV_TAG=${SM_ASIMOV_TAG:-${ASIMOV_LABEL}_Asimov}
 BSM_ASIMOV_TAG=${BSM_ASIMOV_TAG:-BSM_Asimov}
-POINTS_2D_TOTAL=${POINTS_2D_TOTAL:-20000}
-POINTS_2D_SPLIT=${POINTS_2D_SPLIT:-400}
+POINTS_2D_TOTAL=${POINTS_2D_TOTAL:-10000}
+POINTS_2D_SPLIT=${POINTS_2D_SPLIT:-200}
+
+# For --syst runs, reduce points per job to avoid overly long condor jobs.
+if [[ ${USE_SYST} -eq 1 ]]; then
+  if [[ "${POINTS_2D_SPLIT}" =~ ^[0-9]+$ && "${POINTS_2D_SPLIT}" -gt 1 ]]; then
+    POINTS_2D_SPLIT=$(( POINTS_2D_SPLIT / 10 ))
+    if [[ "${POINTS_2D_SPLIT}" -lt 1 ]]; then
+      POINTS_2D_SPLIT=1
+    fi
+  fi
+fi
 POINTS_2D="${POINTS_2D_TOTAL}:${POINTS_2D_SPLIT}"
 
-FINE_POINTS=${FINE_POINTS:-20200}
-FINE_SPLIT=${FINE_SPLIT:-404}
-FINE_FRAC=${FINE_FRAC:-0.2}
-FINE_SM_R_THQ_MIN=${FINE_SM_R_THQ_MIN:-0.0}
-FINE_SM_R_THQ_MAX=${FINE_SM_R_THQ_MAX:-2.0}
-FINE_SM_R_TTH_MIN=${FINE_SM_R_TTH_MIN:-0.8}
-FINE_SM_R_TTH_MAX=${FINE_SM_R_TTH_MAX:-1.2}
-FINE_CENTER_MODE=${FINE_CENTER_MODE:-none}
 FIDUCIAL_YAML_DEFAULT="/net/data_cms3a-1/mausolf/HttCPAnalysis/modelDependenceStudies/fiducial_fractions_2022postEE.yaml"
 FIDUCIAL_YAML=${FIDUCIAL_YAML:-${FIDUCIAL_YAML_DEFAULT}}
 if [[ "${FIDUCIAL}" != "true" ]]; then
   FIDUCIAL_YAML=""
 fi
-FINE_FIDUCIAL_YAML=${FINE_FIDUCIAL_YAML:-${FIDUCIAL_YAML}}
 
 has_model_files() {
   local dir="$1"
@@ -380,211 +389,6 @@ build_scaled_json() {
     --points-2d "${POINTS_2D}"
 }
 
-build_fine_json() {
-  local base_json="$1"
-  local output_json="$2"
-  FINE_POINTS="${FINE_POINTS}" \
-  FINE_SPLIT="${FINE_SPLIT}" \
-  FINE_FRAC="${FINE_FRAC}" \
-  FINE_SM_R_THQ_MIN="${FINE_SM_R_THQ_MIN}" \
-  FINE_SM_R_THQ_MAX="${FINE_SM_R_THQ_MAX}" \
-  FINE_SM_R_TTH_MIN="${FINE_SM_R_TTH_MIN}" \
-  FINE_SM_R_TTH_MAX="${FINE_SM_R_TTH_MAX}" \
-  FINE_CENTER_MODE="${FINE_CENTER_MODE}" \
-  FINE_FIDUCIAL_YAML="${FINE_FIDUCIAL_YAML}" \
-  FINE_THQ_LEP_FRAC="0.3258" \
-  python3 - "${base_json}" "${output_json}" <<'PY'
-import json
-import os
-import re
-import sys
-
-base_json, output_json = sys.argv[1:3]
-points = int(os.environ.get("FINE_POINTS", "20200"))
-split = int(os.environ.get("FINE_SPLIT", "101"))
-frac = float(os.environ.get("FINE_FRAC", "0.2"))
-sm_tHq_min = float(os.environ.get("FINE_SM_R_THQ_MIN", "0.0"))
-sm_tHq_max = float(os.environ.get("FINE_SM_R_THQ_MAX", "2.0"))
-sm_ttH_min = float(os.environ.get("FINE_SM_R_TTH_MIN", "0.8"))
-sm_ttH_max = float(os.environ.get("FINE_SM_R_TTH_MAX", "1.2"))
-center_mode = os.environ.get("FINE_CENTER_MODE", "none").strip().lower()
-fid_yaml = os.environ.get("FINE_FIDUCIAL_YAML", "")
-thq_lep_frac = float(os.environ.get("FINE_THQ_LEP_FRAC", "0.3258"))
-
-def extract_ranges(opts):
-    m_thq = re.search(r"r_tHq=([-0-9.]+),([-0-9.]+)", opts)
-    m_tth = re.search(r"r_ttH=([-0-9.]+),([-0-9.]+)", opts)
-    if not m_thq or not m_tth:
-        return None
-    return (float(m_thq.group(1)), float(m_thq.group(2))), (float(m_tth.group(1)), float(m_tth.group(2)))
-
-def replace_range(opts, param, new_min, new_max):
-    pattern = rf"({param}=)([-0-9.]+),([-0-9.]+)"
-    repl = rf"\g<1>{new_min:.2f},{new_max:.2f}"
-    return re.sub(pattern, repl, opts, count=1)
-
-def central_window(min_val, max_val, center=None):
-    if center is None:
-        center = 0.5 * (min_val + max_val)
-    width = (max_val - min_val) * frac
-    half = 0.5 * width
-    new_min = center - half
-    new_max = center + half
-    if new_min < min_val:
-        new_min = min_val
-    if new_max > max_val:
-        new_max = max_val
-    return new_min, new_max
-
-def parse_coupling(label):
-    special = {
-        "SM": (1.0, 0.0),
-        "CPodd": (0.0, 1.0),
-        "Ktm1Ktt0": (-1.0, 0.0),
-        "Kt0Kttm1": (0.0, -1.0),
-        "Kt0Ktt0": (0.0, 0.0),
-    }
-    if label in special:
-        return special[label]
-    m = re.match(
-        r"Kt(?P<kt_sign>m?)(?P<kt_int>\\d+)(?:p(?P<kt_frac>\\d+))?"
-        r"Ktt(?P<ktt_sign>m?)(?P<ktt_int>\\d+)(?:p(?P<ktt_frac>\\d+))?$",
-        label,
-    )
-    if not m:
-        return None
-    def to_float(sign, whole, frac):
-        val = float(whole)
-        if frac:
-            val += float(frac) / (10 ** len(frac))
-        if sign == "m":
-            val = -val
-        return val
-    kt = to_float(m.group("kt_sign"), m.group("kt_int"), m.group("kt_frac"))
-    ktt = to_float(m.group("ktt_sign"), m.group("ktt_int"), m.group("ktt_frac"))
-    return kt, ktt
-
-def load_fiducial_fractions(path):
-    try:
-        import yaml
-    except Exception:
-        return None
-    if not path or not os.path.isfile(path):
-        return None
-    with open(path, "r") as handle:
-        data = yaml.safe_load(handle)
-    processes = data.get("processes", {})
-    fractions = {}
-    for proc, info in processes.items():
-        bins = info.get("bins", [])
-        if not bins:
-            continue
-        in_frac = bins[0].get("in_frac")
-        if in_frac is None:
-            continue
-        fractions[proc] = float(in_frac)
-    return fractions
-
-def fiducial_ratios(label, fractions):
-    if fractions is None:
-        return None
-    try:
-        import XSBRMap as xs
-    except Exception:
-        return None
-    kt_ktt = parse_coupling(label)
-    if kt_ktt is None:
-        return None
-    kt, ktt = kt_ktt
-
-    def key(proc):
-        return f"{proc}{'' if label == 'SM' else label}"
-
-    def frac(proc):
-        return fractions.get(proc, None)
-
-    ttH_frac = frac(key("tth"))
-    tHW_frac = frac(key("tHW"))
-    tHq_had = frac(key("tHqHad"))
-    tHq_lep = frac(key("tHqLep"))
-
-    ttH_frac_sm = frac("tth")
-    tHW_frac_sm = frac("tHW")
-    tHq_had_sm = frac("tHqHad")
-    tHq_lep_sm = frac("tHqLep")
-    if None in (ttH_frac, tHW_frac, tHq_had, tHq_lep, ttH_frac_sm, tHW_frac_sm, tHq_had_sm, tHq_lep_sm):
-        return None
-
-    tth_sm_xs = xs.tth_sm_xs
-    thw_sm_xs = xs.tHW_sm_xs
-    thq_sm_xs = xs.tHq_sm_xs
-
-    ttH_in = xs.tth_xs(kt, ktt) * ttH_frac
-    tHW_in = xs.tHW_xs(kt, ktt) * tHW_frac
-    tHq_in = xs.tHq_xs(kt, ktt) * (
-        thq_lep_frac * tHq_lep + (1.0 - thq_lep_frac) * tHq_had
-    )
-
-    ttH_sm_in = tth_sm_xs * ttH_frac_sm
-    tHW_sm_in = thw_sm_xs * tHW_frac_sm
-    tHq_sm_in = thq_sm_xs * (
-        thq_lep_frac * tHq_lep_sm + (1.0 - thq_lep_frac) * tHq_had_sm
-    )
-
-    if ttH_sm_in + tHW_sm_in <= 0 or tHq_sm_in <= 0:
-        return None
-    r_ttH = (ttH_in + tHW_in) / (ttH_sm_in + tHW_sm_in)
-    r_tHq = tHq_in / tHq_sm_in
-    return r_tHq, r_ttH
-
-fractions = load_fiducial_fractions(fid_yaml)
-if fractions is not None:
-    # Add path for XSBRMap imports if not already available.
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    signal_tools = os.path.abspath(os.path.join(script_dir, "..", "Signal", "tools"))
-    if signal_tools not in sys.path:
-        sys.path.insert(0, signal_tools)
-
-with open(base_json, "r") as handle:
-    data = json.load(handle)
-
-for mode, payload in data.items():
-    if "points" in payload:
-        payload["points"] = f"{points}:{split}"
-    fit_opts = payload.get("fit_opts")
-    if not fit_opts:
-        continue
-    ranges = extract_ranges(fit_opts)
-    if not ranges:
-        continue
-    (tHq_min, tHq_max), (ttH_min, ttH_max) = ranges
-    center_tHq = None
-    center_ttH = None
-    if center_mode in ("fiducial", "fiducial_inverse") and mode not in ("r_2D", "r_2D_fiducial"):
-        label = mode.replace("r_2D_", "").replace("_fiducial", "")
-        ratios = fiducial_ratios(label, fractions)
-        if ratios is not None:
-            r_tHq, r_ttH = ratios
-            if center_mode == "fiducial_inverse":
-                center_tHq = 1.0 / r_tHq if r_tHq > 0 else None
-                center_ttH = 1.0 / r_ttH if r_ttH > 0 else None
-            else:
-                center_tHq = r_tHq
-                center_ttH = r_ttH
-    if mode in ("r_2D", "r_2D_fiducial"):
-        tHq_min, tHq_max = sm_tHq_min, sm_tHq_max
-        ttH_min, ttH_max = sm_ttH_min, sm_ttH_max
-    else:
-        tHq_min, tHq_max = central_window(tHq_min, tHq_max, center=center_tHq)
-        ttH_min, ttH_max = central_window(ttH_min, ttH_max, center=center_ttH)
-    fit_opts = replace_range(fit_opts, "r_tHq", tHq_min, tHq_max)
-    fit_opts = replace_range(fit_opts, "r_ttH", ttH_min, ttH_max)
-    payload["fit_opts"] = fit_opts
-
-with open(output_json, "w") as handle:
-    json.dump(data, handle, indent=2, sort_keys=True)
-PY
-}
 
 get_range_from_json() {
   local json_path="$1"
@@ -629,6 +433,146 @@ else
 fi
 ASIMOV_ROOT="Datacard_${ASIMOV_EXT}.root"
 TOYS_FILE="${OUTPUT_BASE}/${ASIMOV_TOY}"
+ASIMOV_POSTFIT_EXT="${ASIMOV_EXT}_postfit"
+ASIMOV_REGEN_EXT="${ASIMOV_LABEL}Asimov_postfit${ASIMOV_SUFFIX}"
+ASIMOV_REGEN_TOY="higgsCombine${ASIMOV_REGEN_EXT}.GenerateOnly.mH${MASS}.0.root"
+TOYS_FILE_REGEN="${OUTPUT_BASE}/${ASIMOV_REGEN_TOY}"
+COMBINE_COMMON_OPTS="--cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2"
+
+snapshot_tag() {
+  local dataset="$1"
+  local template="$2"
+  echo "snapshot_${dataset}_with_${template}"
+}
+
+snapshot_path() {
+  local dataset="$1"
+  local template="$2"
+  local tag
+  tag="$(snapshot_tag "${dataset}" "${template}")"
+  echo "${SNAPSHOT_DIR}/higgsCombine_${tag}.MultiDimFit.mH${MASS}.root"
+}
+
+make_snapshot() {
+  local ws_root="$1"
+  local toys_file="$2"
+  local dataset="$3"
+  local template="$4"
+  local tag
+  tag="$(snapshot_tag "${dataset}" "${template}")"
+  local out
+  out="$(snapshot_path "${dataset}" "${template}")"
+  if [[ -f "${out}" ]]; then
+    echo "${out}"
+    return 0
+  fi
+  [[ -f "${ws_root}" ]] || { echo "[ERROR] Workspace not found: ${ws_root}" >&2; exit 1; }
+  [[ -f "${toys_file}" ]] || { echo "[ERROR] Asimov toy not found: ${toys_file}" >&2; exit 1; }
+  pushd "${SNAPSHOT_DIR}" >/dev/null
+  combine -M MultiDimFit "${ws_root}" -m ${MASS} -t -1 --toysFile "${toys_file}" \
+          --setParameters r_tHq=1,r_ttH=1,MH=${MASS} --freezeParameters MH \
+          --saveWorkspace --saveFitResult -n _${tag} \
+          -P r_tHq -P r_ttH --floatOtherPOIs 1 ${COMBINE_COMMON_OPTS}
+  popd >/dev/null
+  [[ -f "${out}" ]] || { echo "[ERROR] Expected snapshot not found at ${out}" >&2; exit 1; }
+  echo "${out}"
+}
+
+SM_SNAPSHOT_PATH="$(snapshot_path "${ASIMOV_EXT}" "SM")"
+if [[ -n "${ASIMOV_SNAPSHOT_OVERRIDE}" ]]; then
+  SM_SNAPSHOT_PATH="${ASIMOV_SNAPSHOT_OVERRIDE}"
+fi
+
+ASIMOV_LABEL_MODE="r_2D${MODE_SUFFIX}"
+ASIMOV_LABEL_CARD="${CARD_SM}"
+ASIMOV_LABEL_CARD_DIR="${OUTPUT_BASE}"
+if [[ "${ASIMOV_LABEL}" != "SM" ]]; then
+  ASIMOV_LABEL_MODE="r_2D_${ASIMOV_LABEL}${MODE_SUFFIX}"
+  ASIMOV_LABEL_CARD="${CARD_MAP[$ASIMOV_LABEL]}"
+  ASIMOV_LABEL_CARD_DIR="${OUTPUT_BASE}/cards/${ASIMOV_EXT}"
+fi
+ASIMOV_LABEL_WS="${ASIMOV_LABEL_CARD_DIR}/Datacard_${ASIMOV_EXT}.root"
+
+ensure_asimov_label_ws() {
+  if [[ -f "${ASIMOV_LABEL_WS}" ]]; then
+    return 0
+  fi
+  if [[ "${ASIMOV_LABEL}" == "SM" ]]; then
+    pushd "${OUTPUT_BASE}" >/dev/null
+    prepare_card "${ASIMOV_LABEL_CARD}" "Datacard_${ASIMOV_EXT}.txt"
+    python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode "${ASIMOV_LABEL_MODE}" --batch local --ext "${ASIMOV_EXT}" --outputDir .
+    popd >/dev/null
+  else
+    [[ -f "${ASIMOV_LABEL_CARD}" ]] || { echo "[ERROR] Card for ${ASIMOV_LABEL} not found at ${ASIMOV_LABEL_CARD}" >&2; exit 1; }
+    mkdir -p "${ASIMOV_LABEL_CARD_DIR}"
+    prepare_card "${ASIMOV_LABEL_CARD}" "${ASIMOV_LABEL_CARD_DIR}/Datacard_${ASIMOV_EXT}.txt"
+    link_models "${ASIMOV_LABEL_CARD_DIR}"
+    pushd "${ASIMOV_LABEL_CARD_DIR}" >/dev/null
+    python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode "${ASIMOV_LABEL_MODE}" --batch local --ext "${ASIMOV_EXT}" --outputDir .
+    popd >/dev/null
+  fi
+  [[ -f "${ASIMOV_LABEL_WS}" ]] || { echo "[ERROR] Expected workspace not found at ${ASIMOV_LABEL_WS}" >&2; exit 1; }
+}
+
+ensure_regenerated_asimov() {
+  if [[ -f "${TOYS_FILE_REGEN}" ]]; then
+    return 0
+  fi
+  ensure_asimov_label_ws
+  [[ -f "${TOYS_FILE}" ]] || { echo "[ERROR] Asimov toy not found at ${TOYS_FILE}. Build ${ASIMOV_LABEL} Asimov first (step 0 for SM, step 3 for BSM)." >&2; exit 1; }
+  SNAPSHOT_PATH="$(make_snapshot "${ASIMOV_LABEL_WS}" "${TOYS_FILE}" "${ASIMOV_EXT}" "${ASIMOV_LABEL}")"
+  pushd "${OUTPUT_BASE}" >/dev/null
+  combine -M GenerateOnly "${SNAPSHOT_PATH}" -m ${MASS} -t -1 \
+          --snapshotName MultiDimFit \
+          --saveWorkspace --saveToys -n ${ASIMOV_REGEN_EXT} -s 0 \
+          --setParameters r_tHq=1,r_ttH=1,MH=${MASS} --freezeParameters MH
+  popd >/dev/null
+  [[ -f "${TOYS_FILE_REGEN}" ]] || { echo "[ERROR] Expected regenerated Asimov toy not found at ${TOYS_FILE_REGEN}" >&2; exit 1; }
+}
+
+ensure_bsm_ws() {
+  local cpl="$1"
+  local as_ext="$2"
+  local card="${CARD_MAP[$cpl]}"
+  local card_dir="${OUTPUT_BASE}/cards/${as_ext}"
+  local ws="${card_dir}/Datacard_${as_ext}.root"
+  if [[ -f "${ws}" ]]; then
+    return 0
+  fi
+  [[ -f "${card}" ]] || { echo "[ERROR] Card for ${cpl} not found at ${card}" >&2; exit 1; }
+  mkdir -p "${card_dir}"
+  prepare_card "${card}" "${card_dir}/Datacard_${as_ext}.txt"
+  link_models "${card_dir}"
+  pushd "${card_dir}" >/dev/null
+  python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode "r_2D_${cpl}${MODE_SUFFIX}" --batch local --ext "${as_ext}" --outputDir .
+  popd >/dev/null
+  [[ -f "${ws}" ]] || { echo "[ERROR] Expected workspace not found at ${ws}" >&2; exit 1; }
+}
+
+ensure_regenerated_bsm() {
+  local cpl="$1"
+  local as_ext="$2"
+  local as_toy="$3"
+  local regen_ext="${as_ext}_postfit"
+  local regen_toy="${OUTPUT_BASE}/higgsCombine${regen_ext}.GenerateOnly.mH${MASS}.0.root"
+  if [[ -f "${regen_toy}" ]]; then
+    echo "${regen_toy}"
+    return 0
+  fi
+  [[ -f "${as_toy}" ]] || { echo "[ERROR] Asimov toy not found at ${as_toy}" >&2; exit 1; }
+  ensure_bsm_ws "${cpl}" "${as_ext}"
+  local ws="${OUTPUT_BASE}/cards/${as_ext}/Datacard_${as_ext}.root"
+  local snapshot_path
+  snapshot_path="$(make_snapshot "${ws}" "${as_toy}" "${as_ext}" "${cpl}")"
+  pushd "${OUTPUT_BASE}" >/dev/null
+  combine -M GenerateOnly "${snapshot_path}" -m ${MASS} -t -1 \
+          --snapshotName MultiDimFit \
+          --saveWorkspace --saveToys -n ${regen_ext} -s 0 \
+          --setParameters r_tHq=1,r_ttH=1,MH=${MASS} --freezeParameters MH
+  popd >/dev/null
+  [[ -f "${regen_toy}" ]] || { echo "[ERROR] Expected regenerated Asimov toy not found at ${regen_toy}" >&2; exit 1; }
+  echo "${regen_toy}"
+}
 
 if [[ ${DO_ASIMOV_SM} -eq 1 ]]; then
   if [[ "${ASIMOV_LABEL}" != "SM" ]]; then
@@ -646,17 +590,34 @@ if [[ ${DO_ASIMOV_SM} -eq 1 ]]; then
 fi
 
 ################################################################################
+# STEP 1b: fit Asimov once and save snapshot (for postfit Asimov regeneration)
+################################################################################
+if [[ ${DO_ASIMOV_POSTFIT} -eq 1 ]]; then
+  if [[ -n "${ASIMOV_SNAPSHOT_OVERRIDE}" ]]; then
+    [[ -f "${SM_SNAPSHOT_PATH}" ]] || { echo "[ERROR] Asimov snapshot not found at ${SM_SNAPSHOT_PATH}" >&2; exit 1; }
+  else
+    [[ -f "${TOYS_FILE}" ]] || { echo "[ERROR] Asimov toy not found at ${TOYS_FILE}. Run step 1 first (SM) or step 3 (BSM)." >&2; exit 1; }
+    ensure_asimov_label_ws
+    make_snapshot "${ASIMOV_LABEL_WS}" "${TOYS_FILE}" "${ASIMOV_EXT}" "${ASIMOV_LABEL}" >/dev/null
+  fi
+fi
+
+################################################################################
+# STEP 1c: regenerate Asimov dataset from postfit snapshot (r=1)
+################################################################################
+if [[ ${DO_ASIMOV_REGEN} -eq 1 ]]; then
+  ensure_regenerated_asimov
+fi
+
+################################################################################
 # (A) Fit SM Asimov with each BSM template
 ################################################################################
 if [[ ${DO_SM_FITS} -eq 1 ]]; then
-  [[ -f "${TOYS_FILE}" ]] || { echo "[ERROR] Asimov toy not found at ${TOYS_FILE}. Build ${ASIMOV_LABEL} Asimov first (step 0 for SM, step 3 for BSM)." >&2; exit 1; }
+  ensure_regenerated_asimov
+  TOYS_FILE_USE="${TOYS_FILE_REGEN}"
   INPUT_JSON_SM="${SCALED_JSON_DIR}/inputs_statonly_tth_th_scaled${MODE_SUFFIX}.json"
   # SM Asimov (SM rates) fitted with BSM templates: center at 1/XS_ratio, width scaled by 1/XS_ratio.
   build_scaled_json "inverse" "inverse" "" "${INPUT_JSON_SM}"
-  INPUT_JSON_SM_FINE="${SCALED_JSON_DIR}/inputs_statonly_tth_th_scaled_fine${MODE_SUFFIX}.json"
-  if [[ ${FINE_GRID} -eq 1 ]]; then
-    FINE_CENTER_MODE="fiducial_inverse" build_fine_json "${INPUT_JSON_SM}" "${INPUT_JSON_SM_FINE}"
-  fi
   for CPL in "${CPL_ORDER[@]}"; do
     CARD="${CARD_MAP[$CPL]}"
     if [[ ! -f "${CARD}" ]]; then
@@ -665,7 +626,7 @@ if [[ ${DO_SM_FITS} -eq 1 ]]; then
     fi
     MODE="r_2D${MODE_SUFFIX}"
     EXT="${SM_ASIMOV_TAG}"
-    EXT_RUN="${EXT}${PDFIDX_SUFFIX}"
+    EXT_RUN="${EXT}"
     # For BSM labels use the coupling-specific mode; SM uses the base r_2D model.
     if [[ "${CPL}" != "SM" ]]; then
       MODE="r_2D_${CPL}${MODE_SUFFIX}"
@@ -681,11 +642,10 @@ if [[ ${DO_SM_FITS} -eq 1 ]]; then
     pushd "${CARD_DIR}" >/dev/null
     python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode ${MODE} --batch local --ext ${EXT_RUN} --outputDir .
     popd >/dev/null
+    RUNFITS_TOY_OPTS="--toysFile ${TOYS_FILE_USE}"
     pushd "${OUTPUT_BASE}" >/dev/null
-    python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT_RUN} --mass ${MASS} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
-    if [[ ${FINE_GRID} -eq 1 ]]; then
-      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM_FINE}" --mode ${MODE} --ext ${EXT_RUN} --mass ${MASS} --toysFile "${TOYS_FILE}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
-    fi
+    python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT_RUN} --mass ${MASS} \
+      ${RUNFITS_TOY_OPTS} --datacardDir "${CARD_DIR}" ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
     popd >/dev/null
   done
 fi
@@ -722,14 +682,51 @@ if [[ ${DO_BSM_ASIMOV} -eq 1 ]]; then
   done
 fi
 
+################################################################################
+# STEP 3b: fit each BSM Asimov with its own signal model (save snapshot)
+################################################################################
+if [[ ${DO_BSM_POSTFIT} -eq 1 ]]; then
+  for CPL in "${CPL_ORDER[@]}"; do
+    [[ "${CPL}" == "SM" ]] && continue
+    AS_EXT="${CPL}_Asimov${ASIMOV_SUFFIX}"
+    AS_TOY="${OUTPUT_BASE}/higgsCombine${AS_EXT}.GenerateOnly.mH${MASS}.0.root"
+    [[ -f "${AS_TOY}" ]] || { echo "[ERROR] Asimov toy missing for ${CPL}: ${AS_TOY}. Run step 3 first." >&2; exit 1; }
+    ensure_bsm_ws "${CPL}" "${AS_EXT}"
+    ws="${OUTPUT_BASE}/cards/${AS_EXT}/Datacard_${AS_EXT}.root"
+    make_snapshot "${ws}" "${AS_TOY}" "${AS_EXT}" "${CPL}" >/dev/null
+  done
+fi
+
+################################################################################
+# STEP 3c: regenerate each BSM Asimov dataset from snapshot (r=1)
+################################################################################
+if [[ ${DO_BSM_REGEN} -eq 1 ]]; then
+  for CPL in "${CPL_ORDER[@]}"; do
+    [[ "${CPL}" == "SM" ]] && continue
+    AS_EXT="${CPL}_Asimov${ASIMOV_SUFFIX}"
+    AS_TOY="${OUTPUT_BASE}/higgsCombine${AS_EXT}.GenerateOnly.mH${MASS}.0.root"
+    [[ -f "${AS_TOY}" ]] || { echo "[ERROR] Asimov toy missing for ${CPL}: ${AS_TOY}. Run step 3 first." >&2; exit 1; }
+    snapshot_file="$(snapshot_path "${AS_EXT}" "${CPL}")"
+    [[ -f "${snapshot_file}" ]] || { echo "[ERROR] Snapshot missing for ${CPL}: ${snapshot_file}. Run step 3b first." >&2; exit 1; }
+    regen_ext="${AS_EXT}_postfit"
+    regen_toy="${OUTPUT_BASE}/higgsCombine${regen_ext}.GenerateOnly.mH${MASS}.0.root"
+    if [[ -f "${regen_toy}" ]]; then
+      continue
+    fi
+    pushd "${OUTPUT_BASE}" >/dev/null
+    combine -M GenerateOnly "${snapshot_file}" -m ${MASS} -t -1 \
+            --snapshotName MultiDimFit \
+            --saveWorkspace --saveToys -n ${regen_ext} -s 0 \
+            --setParameters r_tHq=1,r_ttH=1,MH=${MASS} --freezeParameters MH
+    popd >/dev/null
+    [[ -f "${regen_toy}" ]] || { echo "[ERROR] Expected regenerated Asimov toy not found at ${regen_toy}" >&2; exit 1; }
+  done
+fi
+
 if [[ ${DO_BSM_FITS} -eq 1 ]]; then
   INPUT_JSON_BSM="${SCALED_JSON_DIR}/inputs_statonly_tth_th_scaled_bsmfit${MODE_SUFFIX}.json"
   # Build one JSON with per-coupling entries (r_2D_<CPL>) scaled for BSM Asimov fits.
   build_scaled_json "inverse_sqrt" "ratio" "" "${INPUT_JSON_BSM}"
-  INPUT_JSON_BSM_FINE="${SCALED_JSON_DIR}/inputs_statonly_tth_th_scaled_bsmfit_fine${MODE_SUFFIX}.json"
-  if [[ ${FINE_GRID} -eq 1 ]]; then
-    FINE_CENTER_MODE="fiducial" build_fine_json "${INPUT_JSON_BSM}" "${INPUT_JSON_BSM_FINE}"
-  fi
   for CPL in "${CPL_ORDER[@]}"; do
     [[ "${CPL}" == "SM" ]] && continue
     CARD="${CARD_MAP[$CPL]}"
@@ -742,7 +739,7 @@ if [[ ${DO_BSM_FITS} -eq 1 ]]; then
     if [[ -f "${AS_TOY}" ]]; then
       echo ">>> [BSM Asimov] Fitting ${CPL} Asimov with SM template"
       SM_EXT="${BSM_ASIMOV_TAG}"
-      SM_EXT_RUN="${SM_EXT}${PDFIDX_SUFFIX}"
+      SM_EXT_RUN="${SM_EXT}"
       MODE="r_2D_${CPL}${MODE_SUFFIX}"
       if ! mode_exists_in_json "${INPUT_JSON_BSM}" "${MODE}"; then
         echo "[WARN] Mode '${MODE}' missing in ${INPUT_JSON_BSM}; skipping ${CPL}." >&2
@@ -754,14 +751,12 @@ if [[ ${DO_BSM_FITS} -eq 1 ]]; then
       pushd "${CARD_DIR}" >/dev/null
       python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode r_2D${MODE_SUFFIX} --batch local --ext ${SM_EXT_RUN} --outputDir .
       popd >/dev/null
+      REGEN_TOY="$(ensure_regenerated_bsm "${CPL}" "${AS_EXT}" "${AS_TOY}")"
       pushd "${OUTPUT_BASE}" >/dev/null
-      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT_RUN} --mass ${MASS} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
-      if [[ ${FINE_GRID} -eq 1 ]]; then
-        python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM_FINE}" --mode ${MODE} --ext ${SM_EXT_RUN} --mass ${MASS} --toysFile "${AS_TOY}" --datacardDir "${CARD_DIR}" --nameSuffix fine ${RUNFITS_PDFOPTS} ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
-      fi
+      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT_RUN} --mass ${MASS} --toysFile "${REGEN_TOY}" --datacardDir "${CARD_DIR}" ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
       popd >/dev/null
     else
-      echo "[WARN] Asimov toy missing for ${CPL}: ${AS_TOY}. Run step 2 first." >&2
+      echo "[WARN] Asimov toy missing for ${CPL}: ${AS_TOY}. Run step 3 first." >&2
     fi
   done
 fi
@@ -773,8 +768,8 @@ if [[ ${DO_PLOT} -eq 1 ]]; then
   echo ">>> Collecting and plotting 2D scans (requires finished fits)"
   pushd "${OUTPUT_BASE}" >/dev/null
   BASE_DIR="$(pwd)"
-  PLOT_BASE_SM="${OUTPUT_BASE}/plots_${ASIMOV_LABEL}_asimov${PDFIDX_SUFFIX}"
-  PLOT_BASE_BSM="${OUTPUT_BASE}/plots_bsm_asimov${PDFIDX_SUFFIX}"
+  PLOT_BASE_SM="${OUTPUT_BASE}/plots_${ASIMOV_LABEL}_asimov"
+  PLOT_BASE_BSM="${OUTPUT_BASE}/plots_bsm_asimov"
   INPUT_JSON_SM="${SCALED_JSON_DIR}/inputs_statonly_tth_th_scaled${MODE_SUFFIX}.json"
   # Match the SM-Asimov fit ranges: center at 1/XS_ratio, width ~1/XS_ratio.
   build_scaled_json "inverse" "inverse" "" "${INPUT_JSON_SM}"
@@ -814,7 +809,7 @@ if [[ ${DO_PLOT} -eq 1 ]]; then
   # (A) Asimov (label=${ASIMOV_LABEL}) fitted with each template
   for CPL in "${CPL_ORDER[@]}"; do
     MODE="r_2D${MODE_SUFFIX}"
-    EXT="${SM_ASIMOV_TAG}${PDFIDX_SUFFIX}"
+    EXT="${SM_ASIMOV_TAG}"
     [[ "${CPL}" != "SM" ]] && MODE="r_2D_${CPL}${MODE_SUFFIX}"
     DIR_PRIMARY="runFits${EXT}_${MODE}"
 
@@ -842,7 +837,7 @@ if [[ ${DO_PLOT} -eq 1 ]]; then
   build_scaled_json "inverse_sqrt" "ratio" "" "${INPUT_JSON_BSM}"
   for CPL in "${CPL_ORDER[@]}"; do
     [[ "${CPL}" == "SM" ]] && continue
-    SM_EXT="${BSM_ASIMOV_TAG}${PDFIDX_SUFFIX}"
+    SM_EXT="${BSM_ASIMOV_TAG}"
     MODE="r_2D_${CPL}${MODE_SUFFIX}"
     DIR_PRIMARY="runFits${SM_EXT}_${MODE}"
 
