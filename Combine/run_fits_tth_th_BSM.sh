@@ -479,8 +479,10 @@ make_snapshot() {
 }
 
 SM_SNAPSHOT_PATH="$(snapshot_path "${ASIMOV_EXT}" "SM")"
+ASIMOV_SNAPSHOT_PATH="$(snapshot_path "${ASIMOV_EXT}" "${ASIMOV_LABEL}")"
 if [[ -n "${ASIMOV_SNAPSHOT_OVERRIDE}" ]]; then
   SM_SNAPSHOT_PATH="${ASIMOV_SNAPSHOT_OVERRIDE}"
+  ASIMOV_SNAPSHOT_PATH="${ASIMOV_SNAPSHOT_OVERRIDE}"
 fi
 
 ASIMOV_LABEL_MODE="r_2D${MODE_SUFFIX}"
@@ -643,9 +645,20 @@ if [[ ${DO_SM_FITS} -eq 1 ]]; then
     python3 "${SCRIPT_DIR}/RunText2Workspace.py" --mode ${MODE} --batch local --ext ${EXT_RUN} --outputDir .
     popd >/dev/null
     RUNFITS_TOY_OPTS="--toysFile ${TOYS_FILE_USE}"
+    RUNFITS_SNAPSHOT_OPTS=""
+    # For the template matching the Asimov label, use the postfit snapshot
+    # workspace to keep the discrete background model (pdfindex) aligned with
+    # the regenerated Asimov dataset (no freezing; just consistent initialization).
+    if [[ "${CPL}" == "${ASIMOV_LABEL}" ]]; then
+      if [[ -f "${ASIMOV_SNAPSHOT_PATH}" ]]; then
+        RUNFITS_SNAPSHOT_OPTS="--snapshotWSFile ${ASIMOV_SNAPSHOT_PATH}"
+      else
+        echo "[WARN] Asimov snapshot not found at ${ASIMOV_SNAPSHOT_PATH}; proceeding without snapshotWSFile." >&2
+      fi
+    fi
     pushd "${OUTPUT_BASE}" >/dev/null
     python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT_RUN} --mass ${MASS} \
-      ${RUNFITS_TOY_OPTS} --datacardDir "${CARD_DIR}" ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
+      ${RUNFITS_TOY_OPTS} ${RUNFITS_SNAPSHOT_OPTS} --datacardDir "${CARD_DIR}" ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
     popd >/dev/null
   done
 fi

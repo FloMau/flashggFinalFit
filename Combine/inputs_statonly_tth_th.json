@@ -3,7 +3,7 @@
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-5.0,20.0:r_ttH=-0.5,2.5 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-5.0,20.0:r_ttH=-0.5,2.5 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_tHq_1D": {
     "pois": "r_tHq",
@@ -63,222 +63,222 @@
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Ktm1Ktt0": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-0.5,2.0:r_ttH=-0.5,2.5 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-0.5,2.0:r_ttH=-0.5,2.5 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p7Ktt0p7": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p7Kttm0p7": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0Kttm1": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0Ktt0": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-3.0,8.0:r_ttH=-5,30 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-3.0,8.0:r_ttH=-5,30 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "10000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-10.0,25.0:r_ttH=-0.5,3.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-10.0,25.0:r_ttH=-0.5,3.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_CPodd_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Ktm1Ktt0_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-0.5,2.0:r_ttH=-0.5,2.5 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-0.5,2.0:r_ttH=-0.5,2.5 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p7Ktt0p7_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p7Kttm0p7_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-2.5,10.0:r_ttH=-0.5,3.5 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0Kttm1_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0Ktt0_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-3.0,8.0:r_ttH=-5,30 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-3.0,8.0:r_ttH=-5,30 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p500Ktt0p000": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p500Ktt0p000_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p354Ktt0p354": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p354Ktt0p354_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p000Ktt0p500": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p000Ktt0p500_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Ktm0p500Ktt0p000": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Ktm0p500Ktt0p000_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p000Kttm0p500": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p000Kttm0p500_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p354Kttm0p354": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p354Kttm0p354_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt1p500Ktt0p000": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt1p500Ktt0p000_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt1p061Ktt1p061": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt1p061Ktt1p061_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p000Ktt1p500": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p000Ktt1p500_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Ktm1p500Ktt0p000": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Ktm1p500Ktt0p000_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p000Kttm1p500": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt0p000Kttm1p500_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt1p061Kttm1p061": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   },
   "r_2D_Kt1p061Kttm1p061_fiducial": {
     "pois": "r_tHq,r_ttH",
     "fits": "profile2D:statonly_fixedMH:all",
     "points": "20000:100",
-    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all"
+    "fit_opts": "--freezeParameters MH --setParameterRanges r_tHq=-1.0,4.0:r_ttH=-0.5,5.0 --saveSpecifiedNuis all --setParameters MH=125.08,r_tHq=1,r_ttH=1"
   }
 }

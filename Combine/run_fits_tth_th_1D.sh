@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
   cat <<'EOM'
-Usage: run_fits_tth_th_1D.sh --steps <list> [options]
+Usage: bash run_fits_tth_th_1D.sh --steps <list> [options]
 
 Steps (comma-separated):
   t2w        build workspace in Combine/output/<analysis-tag>

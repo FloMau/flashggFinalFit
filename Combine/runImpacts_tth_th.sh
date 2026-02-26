@@ -21,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
   cat <<'EOF'
-Usage: runImpacts_tth_th.sh --steps <list> [options]
+Usage: bash runImpacts_tth_th.sh --steps <list> [options]
 
 Minimal impacts driver (local):
   1) Optional: run text2workspace in Combine/output/<analysis-tag>
@@ -49,8 +49,10 @@ Options:
   -h, --help               Show help
 
 Examples:
-  bash runImpacts_tth_th.sh --steps init,fit,collect,plot
-  bash runImpacts_tth_th.sh --steps t2w,init,fit,collect,plot
+  bash runImpacts_tth_th.sh --steps t2w,init
+  bash runImpacts_tth_th.sh --steps fit
+  bash runImpacts_tth_th.sh --steps collect --drop-bkg-params
+  bash runImpacts_tth_th.sh --steps plot
   bash runImpacts_tth_th.sh --pois r_tHq --parallel 12
 EOF
 }
@@ -212,6 +214,11 @@ if [[ -n "${DO[plot]:-}" ]]; then
   IMPACTS_JSON="impacts.json"
   if [[ ${DROP_BKG_PARAMS} -eq 1 && -f impacts_corrected_dropBkgModelParams.json ]]; then
     IMPACTS_JSON="impacts_corrected_dropBkgModelParams.json"
+  fi
+  if [[ -z "${TRANSLATE}" ]]; then
+    if [[ -f "${SCRIPT_DIR}/impacts_translate_tth_th.json" ]]; then
+      TRANSLATE="${SCRIPT_DIR}/impacts_translate_tth_th.json"
+    fi
   fi
   if [[ -n "${TRANSLATE}" && ! -f "${TRANSLATE}" ]]; then
     if [[ -f "${SCRIPT_DIR}/${TRANSLATE}" ]]; then
