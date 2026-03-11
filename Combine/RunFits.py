@@ -19,6 +19,7 @@ def get_options():
   parser.add_option('--doObserved', dest='doObserved', action="store_true", default=False, help="Fit to data")
   parser.add_option('--snapshotWSFile', dest='snapshotWSFile', default='', help="Full path to snapshot WS file (use when running observed statonly as nuisances are froze at postfit values)")
   parser.add_option('--commonOpts', dest='commonOpts', default="--cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2", help="Common combine options for running fits")
+  parser.add_option('--freezeConstrainedNuisances', '--freeze-constrained-nuisances', dest='freezeConstrainedNuisances', action='store_true', default=False, help="Append allConstrainedNuisances to --freezeParameters for stat-only fits from the full workspace")
   parser.add_option('--batch', dest='batch', default='condor', help='Batch: [crab,condor/SGE/IC]')
   parser.add_option('--mass', dest='mass', default='125.38', help="Higgs mass")
   parser.add_option('--queue', dest='queue', default='workday', help='Queue e.g. for condor=workday, for IC=hep.q')
@@ -227,6 +228,16 @@ for fidx in range(len(fits)):
       existing_freeze = [p for p in m.group(1).split(",") if p]
       _fit_opts = re.sub(r"--freezeParameters\s+[^\s]+", "", _fit_opts, count=1).strip()
     merged_freeze = list(dict.fromkeys(existing_freeze + [p for p in pdf_freeze.split(",") if p]))
+    _fit_opts = ("%s --freezeParameters %s" % (_fit_opts.strip(), ",".join(merged_freeze))).strip()
+
+  # Optionally freeze constrained nuisances (stat-only from full workspace).
+  if opt.freezeConstrainedNuisances and "allConstrainedNuisances" not in _fit_opts:
+    existing_freeze = []
+    m = re.search(r"--freezeParameters\s+([^\s]+)", _fit_opts)
+    if m:
+      existing_freeze = [p for p in m.group(1).split(",") if p]
+      _fit_opts = re.sub(r"--freezeParameters\s+[^\s]+", "", _fit_opts, count=1).strip()
+    merged_freeze = list(dict.fromkeys(existing_freeze + ["allConstrainedNuisances"]))
     _fit_opts = ("%s --freezeParameters %s" % (_fit_opts.strip(), ",".join(merged_freeze))).strip()
 
   # Running different types of fits...

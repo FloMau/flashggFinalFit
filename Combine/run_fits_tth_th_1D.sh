@@ -3,7 +3,7 @@ set -euo pipefail
 
 # NOTE ON ASIMOV SNAPSHOT USAGE
 # - For Asimov scans, a postfit snapshot is REQUIRED.
-# - The script will NOT auto-run the snapshot step; run it explicitly.
+# - If an Asimov step needs the snapshot and it is missing, the script will create it automatically.
 # - For observed data (--no-asimov), no snapshot is used.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -17,6 +17,13 @@ Steps (comma-separated):
   snapshot   fit Asimov once and save snapshot (mandatory for Asimov scans)
   scan       1D scans with full systematics (profiled other POI)
   scan-stat  1D scans with stat-only (freeze all constrained nuisances)
+  limit-tH   expected upper limit on tH (r_tHq), profiling ttH by default
+  limit-tH-hybrid-submit
+             submit HybridNew toy jobs for the tH limit on a fixed r_tHq grid
+  limit-tH-hybrid-collect
+             merge completed HybridNew toys and extract the final tH limit
+  significance-tth
+             expected significance for ttH (r_ttH), profiling tH by default
   collect    CollectFits for syst + stat-only
   plot       overlay syst + stat-only with plot1DScan.py
 
@@ -31,7 +38,11 @@ Options:
   --split-points <N>       Points per job (default: 1)
   --queue <name>           Condor queue (default: workday)
   --sub-opts <string>      Extra condor submit opts (default: empty)
+  --max-materialize <N>    Limit the number of materialized HybridNew condor jobs
   --translate <json>       plot1DScan.py --translate JSON
+  --stat-only              For limit/significance steps: freeze all constrained nuisances
+  --freeze-other-poi       For limit/significance steps: freeze the non-tested POI to its SM value
+  --hybrid-new             Legacy shortcut for HybridNew submit via --steps limit-tH
   --no-asimov              Run on observed data
   -h, --help               Show help
 
@@ -55,6 +66,17 @@ STEPS=""
 WORKDIR=""
 ASIMOV=1
 TRANSLATE=""
+STAT_ONLY=0
+FREEZE_OTHER_POI=0
+HYBRID_NEW=0
+HYBRID_TOYS_PER_CYCLE=10
+HYBRID_CYCLES=0
+HYBRID_MIN_TOYS=500
+HYBRID_MAX_TOYS=5000
+HYBRID_POINTS=25
+HYBRID_RANGE_MIN=0
+HYBRID_RANGE_MAX=30
+MAX_MATERIALIZE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -68,7 +90,11 @@ while [[ $# -gt 0 ]]; do
     --split-points) SPLIT_POINTS="$2"; shift 2 ;;
     --queue) QUEUE="$2"; shift 2 ;;
     --sub-opts) SUB_OPTS="$2"; shift 2 ;;
+    --max-materialize) MAX_MATERIALIZE="$2"; shift 2 ;;
     --steps) STEPS="$2"; shift 2 ;;
+    --stat-only) STAT_ONLY=1; shift 1 ;;
+    --freeze-other-poi) FREEZE_OTHER_POI=1; shift 1 ;;
+    --hybrid-new) HYBRID_NEW=1; shift 1 ;;
     --no-asimov) ASIMOV=0; shift 1 ;;
     --translate) TRANSLATE="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
@@ -84,6 +110,10 @@ fi
 
 if [[ -z "${WORKDIR}" ]]; then
   WORKDIR="${SCRIPT_DIR}/output/${ANALYSIS_TAG}/scan1d"
+fi
+
+if [[ ${HYBRID_CYCLES} -le 0 ]]; then
+  HYBRID_CYCLES=$(( (HYBRID_MIN_TOYS + HYBRID_TOYS_PER_CYCLE - 1) / HYBRID_TOYS_PER_CYCLE ))
 fi
 
 DATACARD_TXT="${SCRIPT_DIR}/../Datacard/datacard_outputs/${ANALYSIS_TAG}/Datacard_${ANALYSIS_TAG}.txt"
@@ -207,6 +237,175 @@ SNAPSHOT_OPTS=""
     fi
   fi
 
+build_workspace_arg() {
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    echo "${SNAPSHOT_WS} --snapshotName MultiDimFit"
+  else
+    echo "${OUTPUT_BASE}/Datacard_${ANALYSIS_TAG}.root"
+  fi
+}
+
+build_common_asimov_opts() {
+  local freeze_extra="${1:-}"
+  local set_params="MH=${MASS},r_tHq=1,r_ttH=1"
+  local freeze_params="MH"
+  if [[ -n "${freeze_extra}" ]]; then
+    freeze_params="${freeze_params},${freeze_extra}"
+  fi
+  if [[ ${STAT_ONLY} -eq 1 ]]; then
+    freeze_params="${freeze_params},allConstrainedNuisances"
+  fi
+
+  local opts="--setParameters ${set_params} --freezeParameters ${freeze_params}"
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    opts="${opts} -t -1"
+  fi
+  echo "${opts}"
+}
+
+build_limit_mode_opts() {
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    echo "--run expected"
+  fi
+}
+
+run_single_combine() {
+  local outdir="$1"
+  local label="$2"
+  shift 2
+  mkdir -p "${outdir}"
+  (cd "${outdir}" && combine "$@" -n "${label}")
+}
+
+collect_limits_if_present() {
+  local outdir="$1"
+  local output_json="$2"
+  shift 2
+  local pattern=("$@")
+  local files=()
+  for p in "${pattern[@]}"; do
+    for f in ${p}; do
+      [[ -f "${f}" ]] && files+=("${f}")
+    done
+  done
+  if [[ ${#files[@]} -gt 0 ]]; then
+    (cd "${outdir}" && combineTool.py -M CollectLimits "${files[@]##${outdir}/}" -o "${output_json}")
+  fi
+}
+
+write_hybrid_limit_tH_inputs() {
+  local outdir="$1"
+  local workspace_arg="$2"
+
+  mkdir -p "${outdir}"
+
+  local freeze_csv=""
+  if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
+    freeze_csv="r_ttH"
+  fi
+  if [[ ${STAT_ONLY} -eq 1 ]]; then
+    if [[ -n "${freeze_csv}" ]]; then
+      freeze_csv="${freeze_csv},allConstrainedNuisances"
+    else
+      freeze_csv="allConstrainedNuisances"
+    fi
+  fi
+
+  python3 - <<PY
+import json
+
+mass = "${MASS}"
+range_min = float("${HYBRID_RANGE_MIN}")
+range_max = float("${HYBRID_RANGE_MAX}")
+
+# HybridNewGrid's --from-asymptotic helper expands the input span [a, b] to
+# [max(0, a - 0.3(b-a)), b + 0.3(b-a)]. Choose a = 0 and b = range_max / 1.3
+# so that the resulting grid is exactly [0, range_max].
+seed_max = range_max / 1.3
+seed = {
+    mass: {
+        "obs": range_min,
+        "exp0": seed_max
+    }
+}
+with open("${outdir}/hybrid_seed_range.json", "w") as f:
+    json.dump(seed, f, indent=2)
+PY
+
+  python3 - <<PY
+import json
+cfg = {
+  "grids": [],
+  "POIs": ["MH", "r_tHq"],
+  "opts": "-d ${workspace_arg} --testStat=LHC --LHCmode LHC-limits "
+          "--redefineSignalPOI r_tHq "
+          "--cminDefaultMinimizerStrategy 0 "
+          "--X-rtd MINIMIZER_freezeDisassociatedParams "
+          "--X-rtd MINIMIZER_multiMin_hideConstants "
+          "--X-rtd MINIMIZER_multiMin_maskConstraints "
+          "--X-rtd MINIMIZER_multiMin_maskChannels=2"
+          + (" --setParameters r_ttH=1" if "${FREEZE_OTHER_POI}" == "1" else "")
+          + (" --freezeParameters ${freeze_csv}" if "${freeze_csv}" else ""),
+  "toys_per_cycle": ${HYBRID_TOYS_PER_CYCLE},
+  "min_toys": ${HYBRID_MIN_TOYS},
+  "max_toys": ${HYBRID_MAX_TOYS},
+  "CL": 0.95,
+  "signif": 3.0,
+  "verbose": False,
+  "from_asymptotic_settings": {"points": ${HYBRID_POINTS}}
+}
+with open("${outdir}/hybrid_grid.json", "w") as f:
+    json.dump(cfg, f, indent=2)
+PY
+}
+
+build_hybrid_condor_sub_opts() {
+  local opts="+JobFlavour = \"${QUEUE}\""
+  if [[ -n "${SUB_OPTS}" ]]; then
+    opts+=$'\n'"${SUB_OPTS}"
+  fi
+  if [[ -n "${MAX_MATERIALIZE}" ]]; then
+    opts+=$'\n'"max_materialize = ${MAX_MATERIALIZE}"
+  fi
+  printf '%s' "${opts}"
+}
+
+run_hybrid_limit_tH_submit() {
+  local outdir="$1"
+  local label_suffix="$2"
+  local workspace_arg="$3"
+  local common_opts="$4"
+
+  write_hybrid_limit_tH_inputs "${outdir}" "${workspace_arg}"
+  local condor_sub_opts
+  condor_sub_opts="$(build_hybrid_condor_sub_opts)"
+  (
+    cd "${outdir}"
+    combineTool.py -M HybridNewGrid hybrid_grid.json \
+      --cycles "${HYBRID_CYCLES}" \
+      --from-asymptotic hybrid_seed_range.json \
+      --job-mode condor \
+      --task-name "limit_tH_hybrid_${label_suffix}" \
+      --sub-opts "${condor_sub_opts}"
+  )
+}
+
+run_hybrid_limit_tH_collect() {
+  local outdir="$1"
+  local workspace_arg="$2"
+
+  write_hybrid_limit_tH_inputs "${outdir}" "${workspace_arg}"
+  (
+    cd "${outdir}"
+    combineTool.py -M HybridNewGrid hybrid_grid.json \
+      --cycles 0 \
+      --output \
+      --from-asymptotic hybrid_seed_range.json
+  )
+  collect_limits_if_present "${outdir}" "limits_hybridnew.json" \
+    "${outdir}"/higgsCombine.final.MH.*.r_tHq.HybridNew.mH*.root
+}
+
 if [[ -n "${DO[scan]:-}" ]]; then
   ensure_snapshot
   (cd "${WORKDIR}" && python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${JSON_SYST}" --mode "${MODE}" \
@@ -219,6 +418,108 @@ if [[ -n "${DO[scan-stat]:-}" ]]; then
   (cd "${WORKDIR}" && python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${JSON_STAT}" --mode "${MODE}" \
     --mass "${MASS}" --queue "${QUEUE}" --batch condor --datacardDir "${OUTPUT_BASE}" --ext "${EXT}" ${ASIMOV_FLAG} ${SNAPSHOT_OPTS} \
     --subOpts "${SUB_OPTS}")
+fi
+
+if [[ -n "${DO[limit-tH]:-}" ]]; then
+  ensure_snapshot
+  WORKSPACE_ARG="$(build_workspace_arg)"
+  FREEZE_EXTRA=""
+  if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
+    FREEZE_EXTRA="r_ttH"
+  fi
+  COMMON_OPTS="$(build_common_asimov_opts "${FREEZE_EXTRA}")"
+  LIMIT_MODE_OPTS="$(build_limit_mode_opts)"
+  LIMIT_DIR="${WORKDIR}/limit_tH"
+  LABEL_SUFFIX="syst"
+  if [[ ${STAT_ONLY} -eq 1 ]]; then
+    LABEL_SUFFIX="stat"
+  fi
+  if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
+    LABEL_SUFFIX="${LABEL_SUFFIX}_fixedOtherPOI"
+  fi
+  if [[ ${HYBRID_NEW} -eq 1 ]]; then
+    HYBRID_DIR="${LIMIT_DIR}/hybridnew_${LABEL_SUFFIX}"
+    run_hybrid_limit_tH_submit "${HYBRID_DIR}" "${LABEL_SUFFIX}" "${WORKSPACE_ARG}" "${COMMON_OPTS}"
+  else
+    run_single_combine "${LIMIT_DIR}" "_limit_tH_${LABEL_SUFFIX}" \
+      -M AsymptoticLimits ${WORKSPACE_ARG} -m "${MASS}" ${LIMIT_MODE_OPTS} \
+      --redefineSignalPOI r_tHq --rMin 0 --rMax 25 ${COMMON_OPTS} \
+      --cminDefaultMinimizerStrategy 0 \
+      --X-rtd MINIMIZER_freezeDisassociatedParams \
+      --X-rtd MINIMIZER_multiMin_hideConstants \
+      --X-rtd MINIMIZER_multiMin_maskConstraints \
+      --X-rtd MINIMIZER_multiMin_maskChannels=2
+  fi
+fi
+
+if [[ -n "${DO[limit-tH-hybrid-submit]:-}" ]]; then
+  ensure_snapshot
+  WORKSPACE_ARG="$(build_workspace_arg)"
+  FREEZE_EXTRA=""
+  if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
+    FREEZE_EXTRA="r_ttH"
+  fi
+  COMMON_OPTS="$(build_common_asimov_opts "${FREEZE_EXTRA}")"
+  LIMIT_DIR="${WORKDIR}/limit_tH"
+  LABEL_SUFFIX="syst"
+  if [[ ${STAT_ONLY} -eq 1 ]]; then
+    LABEL_SUFFIX="stat"
+  fi
+  if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
+    LABEL_SUFFIX="${LABEL_SUFFIX}_fixedOtherPOI"
+  fi
+  HYBRID_DIR="${LIMIT_DIR}/hybridnew_${LABEL_SUFFIX}"
+  run_hybrid_limit_tH_submit "${HYBRID_DIR}" "${LABEL_SUFFIX}" "${WORKSPACE_ARG}" "${COMMON_OPTS}"
+fi
+
+if [[ -n "${DO[limit-tH-hybrid-collect]:-}" ]]; then
+  ensure_snapshot
+  WORKSPACE_ARG="$(build_workspace_arg)"
+  FREEZE_EXTRA=""
+  if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
+    FREEZE_EXTRA="r_ttH"
+  fi
+  COMMON_OPTS="$(build_common_asimov_opts "${FREEZE_EXTRA}")"
+  LIMIT_DIR="${WORKDIR}/limit_tH"
+  LABEL_SUFFIX="syst"
+  if [[ ${STAT_ONLY} -eq 1 ]]; then
+    LABEL_SUFFIX="stat"
+  fi
+  if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
+    LABEL_SUFFIX="${LABEL_SUFFIX}_fixedOtherPOI"
+  fi
+  HYBRID_DIR="${LIMIT_DIR}/hybridnew_${LABEL_SUFFIX}"
+  run_hybrid_limit_tH_collect "${HYBRID_DIR}" "${WORKSPACE_ARG}"
+fi
+
+if [[ -n "${DO[significance-tth]:-}" ]]; then
+  if [[ ${HYBRID_NEW} -eq 1 ]]; then
+    echo "[ERROR] --hybrid-new is only supported for --steps limit-tH." >&2
+    exit 1
+  fi
+  ensure_snapshot
+  WORKSPACE_ARG="$(build_workspace_arg)"
+  FREEZE_EXTRA=""
+  if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
+    FREEZE_EXTRA="r_tHq"
+  fi
+  COMMON_OPTS="$(build_common_asimov_opts "${FREEZE_EXTRA}")"
+  SIGNIF_DIR="${WORKDIR}/significance_ttH"
+  LABEL_SUFFIX="syst"
+  if [[ ${STAT_ONLY} -eq 1 ]]; then
+    LABEL_SUFFIX="stat"
+  fi
+  if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
+    LABEL_SUFFIX="${LABEL_SUFFIX}_fixedOtherPOI"
+  fi
+  run_single_combine "${SIGNIF_DIR}" "_significance_ttH_${LABEL_SUFFIX}" \
+    -M Significance ${WORKSPACE_ARG} -m "${MASS}" \
+    --redefineSignalPOI r_ttH --rMin 0 --rMax 5 ${COMMON_OPTS} \
+    --cminDefaultMinimizerStrategy 0 \
+    --X-rtd MINIMIZER_freezeDisassociatedParams \
+    --X-rtd MINIMIZER_multiMin_hideConstants \
+    --X-rtd MINIMIZER_multiMin_maskConstraints \
+    --X-rtd MINIMIZER_multiMin_maskChannels=2
 fi
 
 if [[ -n "${DO[collect]:-}" ]]; then

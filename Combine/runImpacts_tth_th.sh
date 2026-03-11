@@ -42,6 +42,9 @@ Options:
   --steps <list>           Required. Comma-separated: t2w,init,fit,collect,plot
   --workdir <dir>          Working dir (default: Combine/output/<analysis-tag>/impacts)
   --no-asimov              Run on observed data (omit -t -1)
+  --unblinded              Shortcut for observed-data impacts: sets --no-asimov,
+                           uses impacts_unblinded workdir, and keeps POI blinded
+                           in plots (passes --blind to plotImpacts.py).
   --drop-bkg-params        Run correctImpacts.py --dropBkgModelParams
   --job-mode <condor|local>  combineTool job mode for init/fit (default: condor)
   --sub-opts <string>      Extra condor submit opts (default: +JobFlavour="workday")
@@ -52,8 +55,7 @@ Examples:
   bash runImpacts_tth_th.sh --steps t2w,init
   bash runImpacts_tth_th.sh --steps fit
   bash runImpacts_tth_th.sh --steps collect --drop-bkg-params
-  bash runImpacts_tth_th.sh --steps plot
-  bash runImpacts_tth_th.sh --pois r_tHq --parallel 12
+  bash runImpacts_tth_th.sh --steps plot --drop-bkg-params
 EOF
 }
 
@@ -70,6 +72,10 @@ DROP_BKG_PARAMS=0
 JOB_MODE="condor"
 SUB_OPTS='+JobFlavour = "workday"'
 TRANSLATE=""
+PLOT_BLIND=0
+UNBLINDED=0
+EXTRA_OPTS="--cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2 --cminApproxPreFitTolerance 0.01 --stepSize 0.05 --setCrossingTolerance 0.00005 --robustHesse 1"
+EXTRA_UNBLINDED_OPTS=""
 
 DATACARD_ROOT=""
 DATACARD_TXT=""
@@ -87,6 +93,7 @@ while [[ $# -gt 0 ]]; do
     --steps) STEPS="$2"; shift 2 ;;
     --workdir) WORKDIR="$2"; shift 2 ;;
     --no-asimov) ASIMOV=0; shift 1 ;;
+    --unblinded) UNBLINDED=1; shift 1 ;;
     --drop-bkg-params) DROP_BKG_PARAMS=1; shift 1 ;;
     --job-mode) JOB_MODE="$2"; shift 2 ;;
     --sub-opts) SUB_OPTS="$2"; shift 2 ;;
@@ -102,8 +109,18 @@ if [[ -z "${STEPS}" ]]; then
   exit 1
 fi
 
+if [[ ${UNBLINDED} -eq 1 ]]; then
+  ASIMOV=0
+  PLOT_BLIND=1
+  EXTRA_OPTS="${EXTRA_OPTS} ${EXTRA_UNBLINDED_OPTS}"
+fi
+
 if [[ -z "${WORKDIR}" ]]; then
-  WORKDIR="${SCRIPT_DIR}/output/${ANALYSIS_TAG}/impacts"
+  if [[ ${UNBLINDED} -eq 1 ]]; then
+    WORKDIR="${SCRIPT_DIR}/output/${ANALYSIS_TAG}/impacts_unblinded"
+  else
+    WORKDIR="${SCRIPT_DIR}/output/${ANALYSIS_TAG}/impacts"
+  fi
 fi
 
 if [[ -z "${DATACARD_ROOT}" ]]; then
@@ -136,7 +153,6 @@ if [[ -n "${SET_PARAMS}" ]]; then
   SET_OPTS="--setParameters ${SET_PARAMS}"
 fi
 
-EXTRA_OPTS="--cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2"
 
 if [[ -n "${DO[t2w]:-}" ]]; then
   T2W_DIR="${SCRIPT_DIR}/output/${ANALYSIS_TAG}"
@@ -235,9 +251,9 @@ if [[ -n "${DO[plot]:-}" ]]; then
     poi="${poi// /}"
     [[ -z "${poi}" ]] && continue
     if [[ -n "${TRANSLATE}" ]]; then
-      plotImpacts.py -i "${IMPACTS_JSON}" -o "impacts_${poi}" --POI "${poi}" --translate "${TRANSLATE}"
+      plotImpacts.py -i "${IMPACTS_JSON}" -o "impacts_${poi}" --POI "${poi}" --translate "${TRANSLATE}" ${PLOT_BLIND:+--blind}
     else
-      plotImpacts.py -i "${IMPACTS_JSON}" -o "impacts_${poi}" --POI "${poi}"
+      plotImpacts.py -i "${IMPACTS_JSON}" -o "impacts_${poi}" --POI "${poi}" ${PLOT_BLIND:+--blind}
     fi
   done
 fi

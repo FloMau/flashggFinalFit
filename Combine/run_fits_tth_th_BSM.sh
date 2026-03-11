@@ -61,6 +61,12 @@ Usage: run_fits_tth_th_BSM.sh --step <list>
     --asimov-snapshot <path>  override SM Asimov snapshot root file path
     --noDeco      use noDeco analysis tag and model paths
     --syst        use syst datacards and signal models (appends _syst to analysis tag)
+    --freeze-constrained-nuisances  run stat-only scans using the syst workspace
+                   (adds allConstrainedNuisances to --freezeParameters at runtime).
+                   Intended for Type-A/Type-B scans with --syst so outputs stay
+                   in the syst directory while profiling is stat-only.
+                   Results are written to runFits*_*_statOnlyFromSyst to avoid
+                   clobbering the full-syst scans.
     --asimovLabel <SM|CPodd|Ktm1Ktt0|...>  use this Asimov dataset for type-A scans (default: SM)
     --couplings <basic-bsm|extended-bsm|sm-only|all>  select coupling set (default: basic-bsm), affects steps 2, 3, 4, 5
     --max-materialize <N>  pass Condor max_materialize to RunFits submissions
@@ -74,6 +80,7 @@ ASIMOV_LABEL="SM"
 COUPLINGS_SET="basic-bsm"
 MAX_MATERIALIZE=""
 USE_SYST=0
+FREEZE_CONSTRAINED=0
 MASS=125.08
 ASIMOV_SNAPSHOT_OVERRIDE=""
 while [[ $# -gt 0 ]]; do
@@ -106,6 +113,10 @@ while [[ $# -gt 0 ]]; do
       USE_SYST=1
       shift 1
       ;;
+    --freeze-constrained-nuisances|--stat-only-from-syst)
+      FREEZE_CONSTRAINED=1
+      shift 1
+      ;;
     --asimovLabel)
       ASIMOV_LABEL="$2"
       shift 2
@@ -134,6 +145,19 @@ if [[ -z "${STEPS_RAW}" ]]; then
   echo "[ERROR] No steps selected. Use --step/--steps." >&2
   print_usage >&2
   exit 1
+fi
+
+if [[ ${FREEZE_CONSTRAINED} -eq 1 && ${USE_SYST} -eq 0 ]]; then
+  echo "[WARN] --freeze-constrained-nuisances is intended for --syst runs; continuing anyway." >&2
+fi
+
+RUN_EXT_SUFFIX=""
+if [[ ${FREEZE_CONSTRAINED} -eq 1 ]]; then
+  RUN_EXT_SUFFIX="_statOnlyFromSyst"
+fi
+RUNFITS_FREEZE_OPT=""
+if [[ ${FREEZE_CONSTRAINED} -eq 1 ]]; then
+  RUNFITS_FREEZE_OPT="--freezeConstrainedNuisances"
 fi
 
 RUNFITS_SUBOPTS=""
@@ -628,7 +652,7 @@ if [[ ${DO_SM_FITS} -eq 1 ]]; then
     fi
     MODE="r_2D${MODE_SUFFIX}"
     EXT="${SM_ASIMOV_TAG}"
-    EXT_RUN="${EXT}"
+    EXT_RUN="${EXT}${RUN_EXT_SUFFIX}"
     # For BSM labels use the coupling-specific mode; SM uses the base r_2D model.
     if [[ "${CPL}" != "SM" ]]; then
       MODE="r_2D_${CPL}${MODE_SUFFIX}"
@@ -658,7 +682,7 @@ if [[ ${DO_SM_FITS} -eq 1 ]]; then
     fi
     pushd "${OUTPUT_BASE}" >/dev/null
     python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT_RUN} --mass ${MASS} \
-      ${RUNFITS_TOY_OPTS} ${RUNFITS_SNAPSHOT_OPTS} --datacardDir "${CARD_DIR}" ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
+      ${RUNFITS_TOY_OPTS} ${RUNFITS_SNAPSHOT_OPTS} ${RUNFITS_FREEZE_OPT} --datacardDir "${CARD_DIR}" ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
     popd >/dev/null
   done
 fi
@@ -752,7 +776,7 @@ if [[ ${DO_BSM_FITS} -eq 1 ]]; then
     if [[ -f "${AS_TOY}" ]]; then
       echo ">>> [BSM Asimov] Fitting ${CPL} Asimov with SM template"
       SM_EXT="${BSM_ASIMOV_TAG}"
-      SM_EXT_RUN="${SM_EXT}"
+      SM_EXT_RUN="${SM_EXT}${RUN_EXT_SUFFIX}"
       MODE="r_2D_${CPL}${MODE_SUFFIX}"
       if ! mode_exists_in_json "${INPUT_JSON_BSM}" "${MODE}"; then
         echo "[WARN] Mode '${MODE}' missing in ${INPUT_JSON_BSM}; skipping ${CPL}." >&2
@@ -766,7 +790,7 @@ if [[ ${DO_BSM_FITS} -eq 1 ]]; then
       popd >/dev/null
       REGEN_TOY="$(ensure_regenerated_bsm "${CPL}" "${AS_EXT}" "${AS_TOY}")"
       pushd "${OUTPUT_BASE}" >/dev/null
-      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT_RUN} --mass ${MASS} --toysFile "${REGEN_TOY}" --datacardDir "${CARD_DIR}" ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
+      python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT_RUN} --mass ${MASS} --toysFile "${REGEN_TOY}" ${RUNFITS_FREEZE_OPT} --datacardDir "${CARD_DIR}" ${RUNFITS_SUBOPTS:+--subOpts "${RUNFITS_SUBOPTS}"}
       popd >/dev/null
     else
       echo "[WARN] Asimov toy missing for ${CPL}: ${AS_TOY}. Run step 3 first." >&2
@@ -823,11 +847,12 @@ if [[ ${DO_PLOT} -eq 1 ]]; then
   for CPL in "${CPL_ORDER[@]}"; do
     MODE="r_2D${MODE_SUFFIX}"
     EXT="${SM_ASIMOV_TAG}"
+    EXT_RUN="${EXT}${RUN_EXT_SUFFIX}"
     [[ "${CPL}" != "SM" ]] && MODE="r_2D_${CPL}${MODE_SUFFIX}"
-    DIR_PRIMARY="runFits${EXT}_${MODE}"
+    DIR_PRIMARY="runFits${EXT_RUN}_${MODE}"
 
     if [[ -d "${DIR_PRIMARY}" ]]; then
-      python3 "${SCRIPT_DIR}/CollectFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT}
+      python3 "${SCRIPT_DIR}/CollectFits.py" --inputJson "${INPUT_JSON_SM}" --mode ${MODE} --ext ${EXT_RUN}
     else
       echo "[WARN] Fit output not found for ${CPL} (${DIR_PRIMARY}); skipping collect/plot."
       continue
@@ -839,7 +864,7 @@ if [[ ${DO_PLOT} -eq 1 ]]; then
       XRANGE="$(get_range_from_json "${INPUT_JSON_SM}" "${MODE}" "r_tHq")"
       YRANGE="$(get_range_from_json "${INPUT_JSON_SM}" "${MODE}" "r_ttH")"
       PLOT_SUBDIR="${PLOT_BASE_SM}/${CPL}"
-      run_plot "${BASE_DIR}/${TREE}" "${XRANGE}" "${YRANGE}" "_${EXT}_${CPL}_rscan" "${PLOT_SUBDIR}"
+      run_plot "${BASE_DIR}/${TREE}" "${XRANGE}" "${YRANGE}" "_${EXT_RUN}_${CPL}_rscan" "${PLOT_SUBDIR}"
     else
       echo "[WARN] Plot input missing for ${CPL}: ${TREE}"
     fi
@@ -851,11 +876,12 @@ if [[ ${DO_PLOT} -eq 1 ]]; then
   for CPL in "${CPL_ORDER[@]}"; do
     [[ "${CPL}" == "SM" ]] && continue
     SM_EXT="${BSM_ASIMOV_TAG}"
+    SM_EXT_RUN="${SM_EXT}${RUN_EXT_SUFFIX}"
     MODE="r_2D_${CPL}${MODE_SUFFIX}"
-    DIR_PRIMARY="runFits${SM_EXT}_${MODE}"
+    DIR_PRIMARY="runFits${SM_EXT_RUN}_${MODE}"
 
     if [[ -d "${DIR_PRIMARY}" ]]; then
-      python3 "${SCRIPT_DIR}/CollectFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT}
+      python3 "${SCRIPT_DIR}/CollectFits.py" --inputJson "${INPUT_JSON_BSM}" --mode ${MODE} --ext ${SM_EXT_RUN}
     else
       echo "[WARN] Fit output not found for ${SM_EXT} (${DIR_PRIMARY}); skipping collect/plot."
       continue
@@ -867,7 +893,7 @@ if [[ ${DO_PLOT} -eq 1 ]]; then
       XRANGE="$(get_range_from_json "${INPUT_JSON_BSM}" "${MODE}" "r_tHq")"
       YRANGE="$(get_range_from_json "${INPUT_JSON_BSM}" "${MODE}" "r_ttH")"
       PLOT_SUBDIR="${PLOT_BASE_BSM}/${CPL}"
-      run_plot "${BASE_DIR}/${TREE}" "${XRANGE}" "${YRANGE}" "_${SM_EXT}_${CPL}_rscan" "${PLOT_SUBDIR}"
+      run_plot "${BASE_DIR}/${TREE}" "${XRANGE}" "${YRANGE}" "_${SM_EXT_RUN}_${CPL}_rscan" "${PLOT_SUBDIR}"
     else
       echo "[WARN] Plot input missing for ${SM_EXT}: ${TREE}"
     fi
