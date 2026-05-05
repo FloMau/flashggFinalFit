@@ -7,6 +7,7 @@ source "${SCRIPT_DIR}/../setup.sh"
 CONFIG_DIR="${SCRIPT_DIR}/configs"
 SETUP="fid"
 USE_NODECO=0
+USE_PHOTON_SYST=0
 MODES=()
 CLEAN_COPY=0
 PROC_CHUNKS=1
@@ -20,14 +21,16 @@ Options:
   --noDeco                     Use noDeco configs
   --config-dir <path>          Override config dir (default: ./configs)
   --mode <name[,name...]>      Run one or more modes:
-                                f-test | f-test-merge | signal-fit | copy-ws | packaging | plotting
+                                f-test | f-test-merge | photon-syst | signal-fit | copy-ws | packaging | plotting
   --clean-copy                 Remove merged workspace dir before copy-ws
   --proc-chunks <N>            Split process list into N chunks for f-test/signal-fit jobs
+  --syst                       Use *_syst configs and enable photon systematics in signal-fit
   -h, --help                   Show help
 
 Examples:
   bash runSignalStuff.sh --setup fid --mode f-test
   bash runSignalStuff.sh --setup fid --mode f-test-merge
+  bash runSignalStuff.sh --setup fid --mode photon-syst --syst
   bash runSignalStuff.sh --setup fid --mode signal-fit
   bash runSignalStuff.sh --setup fid --mode copy-ws,packaging
   bash runSignalStuff.sh --setup fid --mode plotting
@@ -59,6 +62,10 @@ while [[ $# -gt 0 ]]; do
     --config-dir)
       CONFIG_DIR="$2"
       shift 2
+      ;;
+    --syst)
+      USE_PHOTON_SYST=1
+      shift 1
       ;;
     --mode)
       add_modes "$2"
@@ -105,6 +112,7 @@ eras=(2022preEE 2022postEE 2023preBPix 2023postBPix)
 global_ws_root=/net/data_cms3a-1/mausolf/HttCPAnalysis/finalFitPreparation
 BASE_WS_INCL="${global_ws_root}/outputForFinalFits_17Dec2025_withPenalty/workspaces"
 BASE_WS_FID="${global_ws_root}/outputForFinalFits_24Jan2026_CP_penalty_30/workspaces_fiducial"
+BASE_WS_FID_SYST="${global_ws_root}/outputForFinalFits_12Feb2026/workspaces_fiducial"
 BASE_WS_INCL_NODECO="${global_ws_root}/outputForFinalFits_16Jan2026_noDeco/workspaces"
 BASE_WS_FID_NODECO="${global_ws_root}/outputForFinalFits_06Feb2026_noDeco/workspaces_fiducial"
 BASE_WS="$BASE_WS_FID"
@@ -116,6 +124,8 @@ if [[ "$SETUP" == "incl" ]]; then
 else
   if [[ $USE_NODECO -eq 1 ]]; then
     BASE_WS="$BASE_WS_FID_NODECO"
+  elif [[ $USE_PHOTON_SYST -eq 1 ]]; then
+    BASE_WS="$BASE_WS_FID_SYST"
   fi
 fi
 
@@ -128,6 +138,9 @@ case "$SETUP" in
 esac
 if [[ $USE_NODECO -eq 1 ]]; then
   ANALYSIS_TAG="${ANALYSIS_TAG}_noDeco"
+fi
+if [[ $USE_PHOTON_SYST -eq 1 ]]; then
+  ANALYSIS_TAG="${ANALYSIS_TAG}_syst"
 fi
 
 # Packager outputs (used by RunPackager.py and RunPlotter.py).
@@ -147,6 +160,9 @@ config_suffix() {
   esac
   if [[ $USE_NODECO -eq 1 ]]; then
     suffix="${suffix}_noDeco"
+  fi
+  if [[ $USE_PHOTON_SYST -eq 1 ]]; then
+    suffix="${suffix}_syst"
   fi
   echo "$suffix"
 }
@@ -200,12 +216,32 @@ run_signal_fit() {
       exit 1
     fi
     echo ">>> Running signalFit for era: $era"
+    local mode_opts="--skipVertexScenarioSplit --doPlots"
+    if [[ $USE_PHOTON_SYST -eq 0 ]]; then
+      mode_opts="${mode_opts} --skipSystematics"
+    fi
     python3 RunSignalScripts.py \
       --inputConfig "$cfg" \
       --mode signalFit \
       --procChunks "${PROC_CHUNKS}" \
       --groupSignalFitJobsByCat \
-      --modeOpts "--skipVertexScenarioSplit --skipSystematics --doPlots"
+      --modeOpts "${mode_opts}"
+  done
+}
+
+run_photon_syst() {
+  for era in "${eras[@]}"; do
+    local cfg
+    cfg="$(config_path_for_era "$era")"
+    if [[ ! -f "$cfg" ]]; then
+      echo "[ERROR] Config not found: $cfg" >&2
+      exit 1
+    fi
+    echo ">>> Running calcPhotonSyst for era: $era"
+    python3 RunSignalScripts.py \
+      --inputConfig "$cfg" \
+      --mode calcPhotonSyst \
+      --procChunks "${PROC_CHUNKS}"
   done
 }
 
@@ -295,6 +331,9 @@ for mode in "${MODES[@]}"; do
       ;;
     f-test-merge)
       run_f_test_merge
+      ;;
+    photon-syst|calc-photon-syst|calcPhotonSyst)
+      run_photon_syst
       ;;
     signal-fit)
       run_signal_fit

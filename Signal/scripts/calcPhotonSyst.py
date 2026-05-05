@@ -32,6 +32,7 @@ def get_options():
   parser.add_option("--scalesCorr", dest='scalesCorr', default='', help='Photon shape systematics: scalesCorr')
   parser.add_option("--scalesGlobal", dest='scalesGlobal', default='', help='Photon shape systematics: scalesGlobal')
   parser.add_option("--smears", dest='smears', default='', help='Photon shape systematics: smears')
+  parser.add_option("--smearsCorr", dest='smearsCorr', default='', help='Photon shape systematics: smearsCorr')
   parser.add_option("--nBins", dest='nBins', default=80, type='int', help='Number of bins in histograms')
   parser.add_option("--thresholdMean", dest='thresholdMean', default=0.05, type='float', help='Reject mean variations if larger than thresholdMean')
   parser.add_option("--thresholdSigma", dest='thresholdSigma', default=0.5, type='float', help='Reject mean variations if larger than thresholdSigma')
@@ -104,7 +105,7 @@ def getRateVar(_hists):
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Define dataFrame
 columns_data = ['proc','cat','inputWSFile','nominalDataName']
-for stype in ['scales','scalesCorr','smears']:
+for stype in ['scales','scalesCorr','smears','smearsCorr']:
   systs = getattr( opt, stype )
   for s in systs.split(","):
     if s == '': continue
@@ -135,7 +136,7 @@ for ir,r in data.iterrows():
   inputWS = f.Get(inputWSName__)
  
   # Loop over scale and smear systematics
-  for stype in ['scales','scalesCorr','smears']:
+  for stype in ['scales','scalesCorr','smears','smearsCorr']:
     for s in getattr(opt,stype).split(","):
       if s == '': continue
       # Note: Here was an else statement from JLS, include back in if the code does not run

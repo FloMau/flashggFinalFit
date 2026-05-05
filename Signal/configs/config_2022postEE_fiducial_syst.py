@@ -12,12 +12,13 @@ signalScriptCfg = {
   'massPoints':'125', # You can now run with a single mass point if necessary
 
   #Photon shape systematics  
-  'scales':'ScaleEB,ScaleEE', # separate nuisance per year
-  'scalesCorr':'FNUF,Material', # correlated across years
+  'scales':'', # separate nuisance per year
+  'scalesCorr':'FNUF,Material,ScaleEB,ScaleEE', # correlated across years
   #'scalesGlobal':'', # affect all processes equally, correlated across years
   # Removed nonLinearity for HIG-23-014 
   'scalesGlobal':'', # affect all processes equally, correlated across years
-  'smears':'Smearing', # separate nuisance per year
+  'smears':'', # separate nuisance per year
+  'smearsCorr':'Smearing', # correlated across years
 
   # Job submission options
   'batch':'condor', # ['condor_lxplus','condor','SGE','IC','local']

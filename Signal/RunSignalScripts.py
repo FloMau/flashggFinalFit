@@ -50,6 +50,7 @@ if opt.inputConfig != '':
     options['scalesCorr']   = _cfg['scalesCorr']
     options['scalesGlobal'] = _cfg['scalesGlobal']
     options['smears']       = _cfg['smears']
+    options['smearsCorr']   = _cfg.get('smearsCorr','')
     options['batch']        = _cfg['batch']
     options['queue']        = _cfg['queue']
     options['jobOpts']      = _cfg.get('jobOpts', opt.jobOpts)
@@ -121,6 +122,7 @@ if options['mode'] in ['calcPhotonSyst']:
   print("     * scalesCorr   = %s"%options['scalesCorr'])
   print("     * scalesGlobal = %s"%options['scalesGlobal'])
   print("     * smears       = %s"%options['smears'])
+  print("     * smearsCorr   = %s"%options['smearsCorr'])
   print("")
 if options['batch'] in ['condor','IC','SGE']:
   print(" --> Job information:")
