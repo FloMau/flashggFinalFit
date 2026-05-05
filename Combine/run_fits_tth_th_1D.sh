@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# NOTE ON ASIMOV SNAPSHOT USAGE
+# NOTE ON SNAPSHOT USAGE
 # - For Asimov scans, a postfit snapshot is REQUIRED.
-# - If an Asimov step needs the snapshot and it is missing, the script will create it automatically.
-# - For observed data (--no-asimov), no snapshot is used.
+# - For observed stat-only scans from the full syst workspace, an observed postfit
+#   snapshot is REQUIRED so constrained nuisances are frozen at observed postfit values.
+# - Observed full-syst scans use the workspace directly and do not require a snapshot.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -14,7 +15,9 @@ Usage: bash run_fits_tth_th_1D.sh --steps <list> [options]
 
 Steps (comma-separated):
   t2w        build workspace in Combine/output/<analysis-tag>
-  snapshot   fit Asimov once and save snapshot (mandatory for Asimov scans)
+  snapshot   save a postfit snapshot; Asimov with default settings, or observed with --no-asimov
+  snapshot-observed
+             alias for: --steps snapshot --no-asimov
   scan       1D scans with full systematics (profiled other POI)
   scan-stat  1D scans with stat-only (freeze all constrained nuisances)
   limit-tH   expected upper limit on tH (r_tHq), profiling ttH by default
@@ -29,10 +32,10 @@ Steps (comma-separated):
 
 Options:
   --analysis-tag <tag>     Analysis tag (default: tth_th_analysis_fiducial_syst)
-  --workdir <dir>          Output dir (default: Combine/output/<tag>/scan1d)
+  --workdir <dir>          Output dir (default: Combine/output/<tag>/scan1d or scan1d_unblinded)
   --mass <value>           Higgs mass (default: 125.08)
   --pois <p1,p2,...>        POIs (default: r_tHq,r_ttH)
-  --range-r_tHq <min,max>  Scan range for r_tHq (default: -10,25)
+  --range-r_tHq <min,max>  Scan range for r_tHq (default: -20,25)
   --range-r_ttH <min,max>  Scan range for r_ttH (default: -0.5,3.0)
   --points <N>             Grid points (default: 50)
   --split-points <N>       Points per job (default: 1)
@@ -56,7 +59,7 @@ EOM
 ANALYSIS_TAG="tth_th_analysis_fiducial_syst"
 MASS="125.08"
 POIS="r_tHq,r_ttH"
-RANGE_R_THQ="-10,25"
+RANGE_R_THQ="-20,25"
 RANGE_R_TTH="-0.5,3.0"
 POINTS="50"
 SPLIT_POINTS="1"
@@ -64,6 +67,7 @@ QUEUE="workday"
 SUB_OPTS=""
 STEPS=""
 WORKDIR=""
+WORKDIR_GIVEN=0
 ASIMOV=1
 TRANSLATE=""
 STAT_ONLY=0
@@ -81,7 +85,7 @@ MAX_MATERIALIZE=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --analysis-tag) ANALYSIS_TAG="$2"; shift 2 ;;
-    --workdir) WORKDIR="$2"; shift 2 ;;
+    --workdir) WORKDIR="$2"; WORKDIR_GIVEN=1; shift 2 ;;
     --mass) MASS="$2"; shift 2 ;;
     --pois) POIS="$2"; shift 2 ;;
     --range-r_tHq) RANGE_R_THQ="$2"; shift 2 ;;
@@ -108,10 +112,6 @@ if [[ -z "${STEPS}" ]]; then
   exit 1
 fi
 
-if [[ -z "${WORKDIR}" ]]; then
-  WORKDIR="${SCRIPT_DIR}/output/${ANALYSIS_TAG}/scan1d"
-fi
-
 if [[ ${HYBRID_CYCLES} -le 0 ]]; then
   HYBRID_CYCLES=$(( (HYBRID_MIN_TOYS + HYBRID_TOYS_PER_CYCLE - 1) / HYBRID_TOYS_PER_CYCLE ))
 fi
@@ -128,8 +128,20 @@ IFS=',' read -ra STEP_LIST <<< "${STEPS}"
 declare -A DO
 for s in "${STEP_LIST[@]}"; do
   s="${s// /}"
+  if [[ "${s}" == "snapshot-observed" ]]; then
+    ASIMOV=0
+    s="snapshot"
+  fi
   DO["$s"]=1
 done
+
+if [[ ${WORKDIR_GIVEN} -eq 0 ]]; then
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    WORKDIR="${SCRIPT_DIR}/output/${ANALYSIS_TAG}/scan1d"
+  else
+    WORKDIR="${SCRIPT_DIR}/output/${ANALYSIS_TAG}/scan1d_unblinded"
+  fi
+fi
 
 ASIMOV_FLAG=""
 if [[ ${ASIMOV} -ne 1 ]]; then
@@ -141,6 +153,7 @@ mkdir -p "${WORKDIR}"
 JSON_SYST="${WORKDIR}/inputs_1D_syst.json"
 JSON_STAT="${WORKDIR}/inputs_1D_stat.json"
 SNAPSHOT_WS="${WORKDIR}/higgsCombine_AsimovPostfit.MultiDimFit.mH${MASS}.root"
+OBSERVED_SNAPSHOT_WS="${WORKDIR}/higgsCombine_ObservedPostfit.MultiDimFit.mH${MASS}.root"
 
 python3 - <<PY
 import json
@@ -201,25 +214,48 @@ run_snapshot() {
     echo "[ERROR] Missing ${OUTPUT_BASE}/Datacard_${ANALYSIS_TAG}.root. Run --steps t2w first." >&2
     exit 1
   fi
-  (cd "${WORKDIR}" && combine -M MultiDimFit "${OUTPUT_BASE}/Datacard_${ANALYSIS_TAG}.root" -m "${MASS}" -t -1 \
-    --setParameters r_tHq=1,r_ttH=1,MH="${MASS}" --freezeParameters MH \
-    --saveWorkspace --saveFitResult -n _AsimovPostfit \
-    -P r_tHq -P r_ttH --floatOtherPOIs 1 \
-    --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants \
-    --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2)
-  if [[ ! -f "${SNAPSHOT_WS}" ]]; then
-    echo "[ERROR] Snapshot not found at ${SNAPSHOT_WS}" >&2
-    exit 1
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    (cd "${WORKDIR}" && combine -M MultiDimFit "${OUTPUT_BASE}/Datacard_${ANALYSIS_TAG}.root" -m "${MASS}" -t -1 \
+      --setParameters r_tHq=1,r_ttH=1,MH="${MASS}" --freezeParameters MH \
+      --saveWorkspace --saveFitResult -n _AsimovPostfit \
+      -P r_tHq -P r_ttH --floatOtherPOIs 1 \
+      --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants \
+      --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2)
+    if [[ ! -f "${SNAPSHOT_WS}" ]]; then
+      echo "[ERROR] Snapshot not found at ${SNAPSHOT_WS}" >&2
+      exit 1
+    fi
+  else
+    (cd "${WORKDIR}" && combine -M MultiDimFit "${OUTPUT_BASE}/Datacard_${ANALYSIS_TAG}.root" -m "${MASS}" \
+      --setParameters r_tHq=1,r_ttH=1,MH="${MASS}" --freezeParameters MH \
+      --saveWorkspace --saveFitResult -n _ObservedPostfit \
+      -P r_tHq -P r_ttH --floatOtherPOIs 1 \
+      --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants \
+      --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2)
+    if [[ ! -f "${OBSERVED_SNAPSHOT_WS}" ]]; then
+      echo "[ERROR] Snapshot not found at ${OBSERVED_SNAPSHOT_WS}" >&2
+      exit 1
+    fi
   fi
 }
 
-ensure_snapshot() {
-  if [[ ${ASIMOV} -ne 1 ]]; then
-    return 0
-  fi
+ensure_asimov_snapshot() {
   if [[ ! -f "${SNAPSHOT_WS}" ]]; then
     echo "[INFO] Snapshot missing. Running snapshot step first..."
+    local old_asimov="${ASIMOV}"
+    ASIMOV=1
     run_snapshot
+    ASIMOV="${old_asimov}"
+  fi
+}
+
+ensure_observed_snapshot() {
+  if [[ ! -f "${OBSERVED_SNAPSHOT_WS}" ]]; then
+    echo "[INFO] Observed snapshot missing. Running snapshot step first..."
+    local old_asimov="${ASIMOV}"
+    ASIMOV=0
+    run_snapshot
+    ASIMOV="${old_asimov}"
   fi
 }
 
@@ -407,21 +443,36 @@ run_hybrid_limit_tH_collect() {
 }
 
 if [[ -n "${DO[scan]:-}" ]]; then
-  ensure_snapshot
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    ensure_asimov_snapshot
+  fi
   (cd "${WORKDIR}" && python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${JSON_SYST}" --mode "${MODE}" \
     --mass "${MASS}" --queue "${QUEUE}" --batch condor --datacardDir "${OUTPUT_BASE}" --ext "${EXT}" ${ASIMOV_FLAG} ${SNAPSHOT_OPTS} \
     --subOpts "${SUB_OPTS}")
 fi
 
 if [[ -n "${DO[scan-stat]:-}" ]]; then
-  ensure_snapshot
-  (cd "${WORKDIR}" && python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${JSON_STAT}" --mode "${MODE}" \
-    --mass "${MASS}" --queue "${QUEUE}" --batch condor --datacardDir "${OUTPUT_BASE}" --ext "${EXT}" ${ASIMOV_FLAG} ${SNAPSHOT_OPTS} \
-    --subOpts "${SUB_OPTS}")
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    ensure_asimov_snapshot
+    (cd "${WORKDIR}" && python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${JSON_STAT}" --mode "${MODE}" \
+      --mass "${MASS}" --queue "${QUEUE}" --batch condor --datacardDir "${OUTPUT_BASE}" --ext "${EXT}" ${ASIMOV_FLAG} ${SNAPSHOT_OPTS} \
+      --subOpts "${SUB_OPTS}")
+  else
+    ensure_observed_snapshot
+    (cd "${WORKDIR}" && python3 "${SCRIPT_DIR}/RunFits.py" --inputJson "${JSON_STAT}" --mode "${MODE}" \
+      --mass "${MASS}" --queue "${QUEUE}" --batch condor --datacardDir "${OUTPUT_BASE}" --ext "${EXT}" ${ASIMOV_FLAG} \
+      --snapshotWSFile "${OBSERVED_SNAPSHOT_WS}" --subOpts "${SUB_OPTS}")
+  fi
 fi
 
 if [[ -n "${DO[limit-tH]:-}" ]]; then
-  ensure_snapshot
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    ensure_asimov_snapshot
+  fi
+  if [[ ${ASIMOV} -eq 0 && ${STAT_ONLY} -eq 1 ]]; then
+    echo "[ERROR] Observed stat-only limits are not implemented in this script." >&2
+    exit 1
+  fi
   WORKSPACE_ARG="$(build_workspace_arg)"
   FREEZE_EXTRA=""
   if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
@@ -453,7 +504,13 @@ if [[ -n "${DO[limit-tH]:-}" ]]; then
 fi
 
 if [[ -n "${DO[limit-tH-hybrid-submit]:-}" ]]; then
-  ensure_snapshot
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    ensure_asimov_snapshot
+  fi
+  if [[ ${ASIMOV} -eq 0 && ${STAT_ONLY} -eq 1 ]]; then
+    echo "[ERROR] Observed stat-only HybridNew limits are not implemented in this script." >&2
+    exit 1
+  fi
   WORKSPACE_ARG="$(build_workspace_arg)"
   FREEZE_EXTRA=""
   if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
@@ -473,7 +530,13 @@ if [[ -n "${DO[limit-tH-hybrid-submit]:-}" ]]; then
 fi
 
 if [[ -n "${DO[limit-tH-hybrid-collect]:-}" ]]; then
-  ensure_snapshot
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    ensure_asimov_snapshot
+  fi
+  if [[ ${ASIMOV} -eq 0 && ${STAT_ONLY} -eq 1 ]]; then
+    echo "[ERROR] Observed stat-only HybridNew limits are not implemented in this script." >&2
+    exit 1
+  fi
   WORKSPACE_ARG="$(build_workspace_arg)"
   FREEZE_EXTRA=""
   if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then
@@ -497,7 +560,13 @@ if [[ -n "${DO[significance-tth]:-}" ]]; then
     echo "[ERROR] --hybrid-new is only supported for --steps limit-tH." >&2
     exit 1
   fi
-  ensure_snapshot
+  if [[ ${ASIMOV} -eq 1 ]]; then
+    ensure_asimov_snapshot
+  fi
+  if [[ ${ASIMOV} -eq 0 && ${STAT_ONLY} -eq 1 ]]; then
+    echo "[ERROR] Observed stat-only significances are not implemented in this script." >&2
+    exit 1
+  fi
   WORKSPACE_ARG="$(build_workspace_arg)"
   FREEZE_EXTRA=""
   if [[ ${FREEZE_OTHER_POI} -eq 1 ]]; then

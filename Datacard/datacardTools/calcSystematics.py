@@ -155,19 +155,28 @@ def calcSystYields(_nominalDataName,_nominalDataContents,_inputWS,_systFactoryTy
       if pat and (_re.search(pat, proc) is None):
         procSkip.add(s)
   for s,f in _systFactoryTypes.items():
-    if f == "a_h": continue
-    elif f == "a_w":
-      weight_name = systWeightNames.get(s, s) if systWeightNames else s
-      if s in procSkip:
-        systToSkip.append(s)
-        continue
+    if f == "a_h":
+      continue
+    weight_name = systWeightNames.get(s, s) if systWeightNames else s
+    if s in procSkip:
+      systToSkip.append(s)
+      continue
+    if f == "a_w":
       # Adapting to HiggsDNA output conventions, we have just "Up", 01sigma is missing
-      if( "%sUp"%weight_name not in _nominalDataContents )|( "%sDown"%weight_name not in _nominalDataContents ):
+      if ("%sUp" % weight_name not in _nominalDataContents) or ("%sDown" % weight_name not in _nominalDataContents):
         systToSkip.append(s)
         print(" --> [%s] Weight in nominal RooDataSet for systematic (%s) does not exist for (%s,%s). %s"%(errMessage,s,proc,year,errString))
-        if not ignoreWarnings: sys.exit(1) 
+        if not ignoreWarnings:
+          sys.exit(1)
       # Do not require a nominal weight branch named exactly as the systematic.
       # HiggsDNA stores only the Up/Down weights plus a shared weight_central.
+    elif f == "s_w":
+      # For symmetric weights, ensure the mapped weight name exists
+      if weight_name not in _nominalDataContents:
+        systToSkip.append(s)
+        print(" --> [%s] Weight in nominal RooDataSet for systematic (%s) does not exist for (%s,%s). %s"%(errMessage,s,proc,year,errString))
+        if not ignoreWarnings:
+          sys.exit(1)
  
   if data_nominal.numEntries() < 100:
     print(" [WARNING] Less than 100 events in considered bin. Those variations will be excluded.")
@@ -182,6 +191,7 @@ def calcSystYields(_nominalDataName,_nominalDataContents,_inputWS,_systFactoryTy
     f_NNLOPS = abs(p.getRealValue("NNLOPSweight")) if "NNLOPSweight" in _nominalDataContents else 1.
     # Loop over systematics:
     for s, f in _systFactoryTypes.items(): 
+      weight_name = systWeightNames.get(s, s) if systWeightNames else s
 
       if f == "a_h": continue
 
@@ -252,7 +262,7 @@ def calcSystYields(_nominalDataName,_nominalDataContents,_inputWS,_systFactoryTy
           elif "LHEPd" in s: centralWeightStr = "weight_LHEPd_0"
           else: centralWeightStr = "centralObjectWeight"
           f_central = p.getRealValue(centralWeightStr) if centralWeightStr in _nominalDataContents else 1.
-          f = p.getRealValue(s)
+          f = p.getRealValue(weight_name)
           # Checks:
           # 1) if both central weight and shifted weight are 0 then add nominal weight
           if( f_central == 0 )&( f == 0 ):

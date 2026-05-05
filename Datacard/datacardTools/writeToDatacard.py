@@ -236,8 +236,10 @@ def writeSystematic(f,d,s,options,stxsMergeScheme=None,scaleCorrScheme=None):
               'weight_Higgs_plus_c_syst_ggH',
               'weight_Higgs_plus_b_syst_vbf',
               'weight_Higgs_plus_c_syst_vbf',
+              'weight_Higgs_plus_b_syst_VH',
+              'weight_Higgs_plus_c_syst_VH',
             }
-            pool_min_events = 90
+            pool_min_events = 40
             if s['name'] in pool_syst_names:
               pooled_col = f"{s['name']}_pooled"
               n_pool = r.get('numEvents_pooled', nval)
@@ -295,8 +297,10 @@ def writeSystematic(f,d,s,options,stxsMergeScheme=None,scaleCorrScheme=None):
                 'weight_Higgs_plus_c_syst_ggH',
                 'weight_Higgs_plus_b_syst_vbf',
                 'weight_Higgs_plus_c_syst_vbf',
+                'weight_Higgs_plus_b_syst_VH',
+                'weight_Higgs_plus_c_syst_VH',
               }
-              pool_min_events = 90
+              pool_min_events = 40
               if s['name'] in pool_syst_names:
                 pooled_col = f"{s['name']}_pooled"
                 n_pool = r.get('numEvents_pooled', nval)
@@ -320,10 +324,10 @@ def writeSystematic(f,d,s,options,stxsMergeScheme=None,scaleCorrScheme=None):
 def addSyst(l,v,s,p,c,n):
   #l-systematic line, v-value, s-systematic title, p-proc, c-cat, n-numEvents
   minEventNumber = 100
-  # For pooled Higgs+heavy-flavor systematics we already enforce a 90-event
+  # For pooled Higgs+heavy-flavor systematics we already enforce a 40-event
   # threshold across eras; use the same threshold here to avoid double-pruning.
   if ("Higgs_plus_b_syst" in s) or ("Higgs_plus_c_syst" in s):
-    minEventNumber = 90
+    minEventNumber = 40
   # Cap extreme lnN variations to keep pathological weights under control.
   cap_min = 0.05
   cap_max = 2.0
@@ -375,22 +379,11 @@ def addSyst(l,v,s,p,c,n):
       # Check 2: neither variation is non-positive. If one side is non-positive,
       # mirror the other side to keep a symmetric lnN instead of dropping it.
       elif(v[0] <= 0.)|(v[1] <= 0.):
-        if (v[0] <= 0.) != (v[1] <= 0.) and (v[0] > 0. or v[1] > 0.):
-          v0, v1 = v[0], v[1]
-          if v0 <= 0. and v1 > 0.:
-            v0 = 1.0 / v1
-          elif v1 <= 0. and v0 > 0.:
-            v1 = 1.0 / v0
-          v0 = _cap_lnN(v0)
-          v1 = _cap_lnN(v1)
-          print(" --> [WARNING] systematic %s: non-positive variation for (%s,%s) -> mirrored to %.3f/%.3f" % (s, p, c, v0, v1))
-          vstr = "%.3f/%.3f"%(v0,v1)
-          l += "%-15s "%vstr
-        else:
-          print(" --> [WARNING] systematic %s: non-positive variation for (%s,%s)"%(s,p,c))
-          #vstr = "%.3f/%.3f"%(v[0],v[1])
-          vstr = "-"
-          l += "%-15s "%vstr
+        # If any side is non-positive, clamp to the allowed range directly
+        v0, v1 = cap_min, cap_max
+        print(" --> [WARNING] systematic %s: non-positive variation for (%s,%s) -> capped to %.3f/%.3f" % (s, p, c, v0, v1))
+        vstr = "%.3f/%.3f"%(v0,v1)
+        l += "%-15s "%vstr
       # Check 3: effect is approximately symmetric: then just add single up variation
       elif( abs((v[0]*v[1])-1)<0.0005 ):
         v1 = _cap_lnN(v[1])

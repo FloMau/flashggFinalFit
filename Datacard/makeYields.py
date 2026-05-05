@@ -28,7 +28,7 @@ def get_options():
   parser.add_option("--outputDir", dest='outputDir', default='.', help="Output directory")
   parser.add_option("--outputYieldsDir", dest='outputYieldsDir', default='', help="Write yields directly under this directory (overrides outputDir/Datacards layout)")
   parser.add_option('--cat', dest='cat', default='', help='Analysis category')
-  parser.add_option('--variable', dest='variable', default='', help='Considered variable for the addition of variable specific systematics (e.g. JEC, JES, etc.).')
+  parser.add_option('--variable', dest='variable', default='', help='Considered variable for variable-specific systematics (if applicable).')
   parser.add_option('--procs', dest='procs', default='auto', help='Comma separated list of signal processes. auto = automatically inferred from input workspaces')
   parser.add_option('--ext', dest='ext', default='', help='Extension for saving') 
   parser.add_option('--mass', dest='mass', default='125', help='Input workspace mass')
@@ -195,12 +195,6 @@ if opt.doSystematics:
   # No experimental systematics for NOTAG
   if opt.cat != "NOTAG":
     for s in experimental_systematics: 
-      if opt.variable != '':
-        if (not opt.variable in jetVariables) and ((s['name'] == 'JecSystTotal') or (s['name'] == 'JerSyst')):
-          continue
-      else: # Inclusive run
-        if ((s['name'] == 'JecSystTotal') or (s['name'] == 'JerSyst')):
-          continue
       if s['type'] == 'factory': 
         # Fix for HEM as only in 2018 workspaces
         if s['name'] == 'JetHEM': experimentalFactoryType[s['name']] = "a_h"

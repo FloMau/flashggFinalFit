@@ -12,7 +12,6 @@ from collections import OrderedDict as od
 from systematics import theory_systematics, experimental_systematics, signal_shape_systematics
 import errno
 
-from commonTools import jetVariables
 
 
 # Function to safely create a directory
@@ -22,7 +21,6 @@ def safe_mkdir(path):
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
-                
 
 def get_options():
   parser = OptionParser()
@@ -30,7 +28,7 @@ def get_options():
   parser.add_option('--outputDir', default='./', help="Path to the output directory.")
   parser.add_option('--ext', dest='ext', default='', help="Extension (used when running RunYields.py)")
   parser.add_option('--years', dest='years', default='2022preEE,2022postEE', help="Comma separated list of years in makeYields output")
-  parser.add_option('--variable', dest='variable', default='', help='Considered variable for the addition of variable specific systematics (e.g. JEC, JES, etc.).')
+  parser.add_option('--variable', dest='variable', default='', help='Considered variable for variable-specific systematics (if applicable).')
   # For pruning processes
   parser.add_option('--prune', dest='prune', default=False, action="store_true", help="Prune proc x cat which make up less than pruneThreshold (default 0.1%) of given total category")
   parser.add_option('--pruneThreshold', dest='pruneThreshold', default=0.001, type='float', help="Threshold with which to prune proc x cat as fraction of total category yield (default=0.1%)")
@@ -95,12 +93,6 @@ if opt.doSystematics:
   theoryFactoryType = {}
   mask = (~data['cat'].str.contains("NOTAG"))&(data['type']=='sig')
   for s in experimental_systematics:
-    if opt.variable != '':
-      if (not opt.variable in jetVariables) and ((s['name'] == 'JecSystTotal') or (s['name'] == 'JerSyst')):
-        continue
-    else: # Inclusive run
-      if ((s['name'] == 'JecSystTotal') or (s['name'] == 'JerSyst')):
-        continue
     if s['type'] == 'factory': 
       # Fix for HEM as only in 2018 workspaces
       if s['name'] == 'JetHEM': experimentalFactoryType[s['name']] = "a_h"
@@ -114,22 +106,9 @@ if opt.doSystematics:
   print(" --> Adding experimental systematics variations to dataFrame")
   # Add constant systematics to dataFrame
   for s in experimental_systematics:
-    if opt.variable != '':
-      if (not opt.variable in jetVariables) and ((s['name'] == 'JecSystTotal') or (s['name'] == 'JerSyst')):
-        continue
-    else: # Inclusive run
-      if ((s['name'] == 'JecSystTotal') or (s['name'] == 'JerSyst')):
-        continue
     if s['type'] == 'constant': data = addConstantSyst(data,s,opt)
   
-  if (opt.variable == '') or (opt.variable not in jetVariables):
-    # Inclusive run
-    experimentalSystematics = [
-        entry for entry in experimental_systematics
-        if entry['name'] not in {'JecSystTotal', 'JerSyst'}
-    ]
-  else:
-    experimentalSystematics = experimental_systematics
+  experimentalSystematics = experimental_systematics
   data = experimentalSystFactory(data, experimentalSystematics, experimentalFactoryType, opt )
 
   # Theory:
@@ -141,7 +120,14 @@ if opt.doSystematics:
   data = theorySystFactory(data, theory_systematics, theoryFactoryType, opt, stxsMergeScheme=STXSMergingScheme)
   #data, theory_systematics = groupSystematics(data, theory_systematics, opt, prefix="scaleWeight", groupings=[[1,2],[3,6],[4,8]], stxsMergeScheme=STXSMergingScheme)
   # Changed to nanoAOD conventions based on advice by Jon, 22nd of Feb 2024
-  data, theory_systematics = groupSystematics(data, theory_systematics, opt, prefix="weight_LHEScal", groupings=[[0,8],[1,7],[3,5]], stxsMergeScheme=STXSMergingScheme)
+  # Group LHE scale weights per production mode (decorrelated between processes)
+  for _tag in ("ggH", "VBF", "VH", "bbH", "ttH", "tHq", "tHW"):
+    data, theory_systematics = groupSystematics(
+      data, theory_systematics, opt,
+      prefix=f"weight_LHEScal_{_tag}",
+      groupings=[[0,8],[1,7],[3,5]],
+      stxsMergeScheme=STXSMergingScheme
+    )
   #data, theory_systematics = groupSystematics(data, theory_systematics, opt, prefix="alphaSWeight", groupings=[[0,1]], stxsMergeScheme=STXSMergingScheme)
 
   # Rename systematics
@@ -154,6 +140,8 @@ if opt.doSystematics:
       'weight_Higgs_plus_c_syst_ggH',
       'weight_Higgs_plus_b_syst_vbf',
       'weight_Higgs_plus_c_syst_vbf',
+      'weight_Higgs_plus_b_syst_VH',
+      'weight_Higgs_plus_c_syst_VH',
   }
   if pool_syst_names:
     years_list = opt.years.split(",")
@@ -300,12 +288,6 @@ if not writeProcesses(fdata,data,opt):
 if opt.doSystematics:
   print(" --> Systematics for bins x processes with less than 100 events will be deactivated!")
   for syst in experimental_systematics:
-    if opt.variable != '':
-      if (not opt.variable in jetVariables) and ((syst['name'] == 'JecSystTotal') or (syst['name'] == 'JerSyst')):
-        continue
-    else: # Inclusive run
-      if ((syst['name'] == 'JecSystTotal') or (syst['name'] == 'JerSyst')):
-        continue
     if not writeSystematic(fdata,data,syst,opt):
       print(" --> [ERROR] in writing systematic %s (experiment). Leaving"%syst['name'])
       leave()

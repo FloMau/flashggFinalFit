@@ -70,13 +70,13 @@ decayMode = 'hgg'
 # flashgg input WS objects
 inputWSName__ = "tagsDumper/cms_hgg_13TeV"
 inputHiggsDNAAllData__ = "DiphotonTree"
-inputNuisanceExtMap = {'scales':'','scalesCorr':'','smears':''}
+inputNuisanceExtMap = {'scales':'','scalesCorr':'','smears':'','smearsCorr':''}
 # Signal output WS objects
 outputWSName__ = "wsig"
 outputWSObjectTitle__ = "hggpdfsmrel"
 outputWSNuisanceTitle__ = "CMS_hgg_nuisance"
-#outputNuisanceExtMap = {'scales':'%sscale'%sqrts__,'scalesCorr':'%sscaleCorr'%sqrts__,'smears':'%ssmear'%sqrts__,'scalesGlobal':'%sscale'%sqrts__}
-outputNuisanceExtMap = {'scales':'','scalesCorr':'','smears':'','scalesGlobal':''}
+#outputNuisanceExtMap = {'scales':'%sscale'%sqrts__,'scalesCorr':'%sscaleCorr'%sqrts__,'smears':'%ssmear'%sqrts__,'smearsCorr':'%ssmearCorr'%sqrts__,'scalesGlobal':'%sscale'%sqrts__}
+outputNuisanceExtMap = {'scales':'','scalesCorr':'','smears':'','smearsCorr':'','scalesGlobal':''}
 # Bkg output WS objects
 bkgWSName__ = "multipdf"
 

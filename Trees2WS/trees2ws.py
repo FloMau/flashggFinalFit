@@ -99,7 +99,7 @@ def make_argset(_ws=None,_varNames=None):
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Production modes to skip theory weights: fill with 1's
-modesToSkipTheoryWeights = ['bbh','thq','thw']
+modesToSkipTheoryWeights = []
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Extract options from config file:
@@ -233,7 +233,21 @@ for cat in cats:
   else: treeName = "%s/%s_%s_%s_%s"%(inputTreeDir,opt.productionMode,opt.inputMass,sqrts__,cat)
   print("    * tree: %s"%treeName)
   # Extract tree from uproot
-  t = f[treeName]
+  try:
+    t = f[treeName]
+  except uproot.exceptions.KeyInFileError:
+    alt_tree = None
+    if opt.productionMode.startswith("tth"):
+      alt_mode = "ttH" + opt.productionMode[3:]
+      if inputTreeDir == '':
+        alt_tree = "%s_%s_%s_%s"%(alt_mode,opt.inputMass,sqrts__,cat)
+      else:
+        alt_tree = "%s/%s_%s_%s_%s"%(inputTreeDir,alt_mode,opt.inputMass,sqrts__,cat)
+    if alt_tree is None:
+      raise
+    print("    * tree: %s (fallback)"%alt_tree)
+    t = f[alt_tree]
+    treeName = alt_tree
   print(f">>> branches in {treeName}: {t.keys()}")
   if t.num_entries == 0: continue
   
