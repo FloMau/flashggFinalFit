@@ -90,8 +90,8 @@ for mode,pois in modes.items():
   for iBin,iPar in enumerate(pois):
     for jBin,jPar in enumerate(pois_reverse):
       if opt.translate is not None:
-        theHist.GetXaxis().SetBinLabel(iBin+1, translate[iPar])
-        theHist.GetYaxis().SetBinLabel(jBin+1, translate[jPar])
+        theHist.GetXaxis().SetBinLabel(iBin+1, translate.get(iPar, iPar))
+        theHist.GetYaxis().SetBinLabel(jBin+1, translate.get(jPar, jPar))
       else:
         theHist.GetXaxis().SetBinLabel(iBin+1, iPar)
         theHist.GetYaxis().SetBinLabel(jBin+1, jPar)
@@ -124,7 +124,20 @@ for mode,pois in modes.items():
   theHist.GetYaxis().SetLabelOffset(0.003)
   theHist.GetYaxis().SetLabelFont(42)
   if opt.doCov:
-    theHist.GetZaxis().SetRangeUser(-0.5,0.5)
+    # Use dynamic range for covariance so off-diagonal entries are visible
+    max_abs = 0.0
+    for ip in pois:
+      for jp in pois:
+        try:
+          v = abs(theMap[(ip, jp)])
+        except Exception:
+          v = 0.0
+        if v > max_abs:
+          max_abs = v
+    if max_abs <= 0:
+      max_abs = 1.0
+    pad = 1.05 * max_abs
+    theHist.GetZaxis().SetRangeUser(-pad, pad)
   else:
     theHist.GetZaxis().SetRangeUser(-1., 1.)
   theHist.GetZaxis().SetTickLength(0.)
@@ -210,7 +223,11 @@ for mode,pois in modes.items():
   latex.SetTextSize(0.04)
   latex.DrawLatex(1.00-canv.GetRightMargin()-0.,1.00-canv.GetTopMargin()+0.025,'%0.1f fb^{-1} (13.6 TeV)'%lumiMap[f"{opt.year}"])
   latex.SetTextSize(0.04)
-  latex.DrawLatex(1.00-canv.GetRightMargin()-0.02,1.00-canv.GetTopMargin()-0.04,f'{translate[opt.mode]}')
+  if opt.translate is not None:
+    mode_label = translate.get(opt.mode, opt.mode)
+  else:
+    mode_label = opt.mode
+  latex.DrawLatex(1.00-canv.GetRightMargin()-0.02,1.00-canv.GetTopMargin()-0.04,f'{mode_label}')
   latex.DrawLatex(1.00-canv.GetRightMargin()-0.02,1.00-canv.GetTopMargin()-0.10,'H #rightarrow #gamma#gamma')
   latex.DrawLatex(1.00-canv.GetRightMargin()-0.02,1.00-canv.GetTopMargin()-0.15,'#font[52]{m}_{H} = 125.38 GeV')
   

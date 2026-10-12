@@ -256,6 +256,9 @@ class CalcPhotonSystCategory(Task, HTCondorWorkflow, SlurmWorkflow, law.LocalWor
     scalesCorr = law.Parameter(default="", description="Scale corrections")
     scalesGlobal = law.Parameter(default="", description="Global scales")
     smears = law.Parameter(description="Smearings")
+    smearsCorr = law.Parameter(default="", description="Smearings (correlated)")
+    smearsCorr = law.Parameter(default="", description="Smearings (correlated)")
+    smearsCorr = law.Parameter(default="", description="Smearings (correlated)")
     variable = law.Parameter(default="", description="Variable to be used")
     year = law.Parameter(description="Year")    
     
@@ -337,6 +340,12 @@ class CalcPhotonSystCategory(Task, HTCondorWorkflow, SlurmWorkflow, law.LocalWor
         if self.scalesCorr != "":
             arguments.append("--scalesGlobal")
             arguments.append("%s"%self.scalesGlobal)
+        if self.smearsCorr != "":
+            arguments.append("--smearsCorr")
+            arguments.append("%s"%self.smearsCorr)
+        if self.smearsCorr != "":
+            arguments.append("--smearsCorr")
+            arguments.append("%s"%self.smearsCorr)
         command = arguments
         # print(command)
         try:
@@ -411,7 +420,7 @@ class CalcPhotonSyst(law.Task):
             for mp in currentConfig['massPoints'].split(","): mps.append(int(mp))
             currentConfig['massLow'], currentConfig['massHigh'] = '%s'%min(mps), '%s'%max(mps)
                     
-            tasks.append(CalcPhotonSystCategory(input_path=input_path, output_dir=output_dir, ext=currentConfig['ext'], cats=currentConfig['cats'], procs=currentConfig['procs'], scales=currentConfig['scales'], scalesCorr=currentConfig['scalesCorr'], scalesGlobal=currentConfig['scalesGlobal'], smears=currentConfig['smears'], variable=self.variable, year=self.year, version=f"v{i}", workflow=currentConfig['execution']))
+            tasks.append(CalcPhotonSystCategory(input_path=input_path, output_dir=output_dir, ext=currentConfig['ext'], cats=currentConfig['cats'], procs=currentConfig['procs'], scales=currentConfig['scales'], scalesCorr=currentConfig['scalesCorr'], scalesGlobal=currentConfig['scalesGlobal'], smears=currentConfig['smears'], smearsCorr=currentConfig.get('smearsCorr',''), variable=self.variable, year=self.year, version=f"v{i}", workflow=currentConfig['execution']))
             i += 1
 
         return tasks
@@ -588,6 +597,9 @@ class SignalFitCategoryProcess(Task, HTCondorWorkflow, SlurmWorkflow, law.LocalW
         if self.scalesGlobal != "":
             arguments += ["--scalesGlobal"]
             arguments += ["%s"%self.scalesGlobal]
+        if self.smearsCorr != "":
+            arguments += ["--smearsCorr"]
+            arguments += ["%s"%self.smearsCorr]
         command = arguments
         print(command)
         try:
@@ -653,7 +665,7 @@ class SignalFit(law.Task):
             for mp in currentConfig['massPoints'].split(","): mps.append(int(mp))
             currentConfig['massLow'], currentConfig['massHigh'] = '%s'%min(mps), '%s'%max(mps)         
             
-            tasks.append(SignalFitCategoryProcess(input_path=input_path, output_dir=output_dir, ext=currentConfig['ext'], cats=currentConfig['cats'], procs=currentConfig['procs'], scales=currentConfig['scales'], scalesCorr=currentConfig['scalesCorr'], scalesGlobal=currentConfig['scalesGlobal'], smears=currentConfig['smears'], year=currentConfig['year'], analysis=currentConfig['analysis'], replacementThreshold=currentConfig['replacementThreshold'], massPoints=currentConfig['massPoints'], beamspotWidthData=currentConfig['beamspotWidthData'], beamspotWidthMC=currentConfig['beamspotWidthMC'], doPlots=currentConfig['doPlots'], variable=self.variable, version=f"v{i}", workflow=currentConfig['execution']))
+            tasks.append(SignalFitCategoryProcess(input_path=input_path, output_dir=output_dir, ext=currentConfig['ext'], cats=currentConfig['cats'], procs=currentConfig['procs'], scales=currentConfig['scales'], scalesCorr=currentConfig['scalesCorr'], scalesGlobal=currentConfig['scalesGlobal'], smears=currentConfig['smears'], smearsCorr=currentConfig.get('smearsCorr',''), year=currentConfig['year'], analysis=currentConfig['analysis'], replacementThreshold=currentConfig['replacementThreshold'], massPoints=currentConfig['massPoints'], beamspotWidthData=currentConfig['beamspotWidthData'], beamspotWidthMC=currentConfig['beamspotWidthMC'], doPlots=currentConfig['doPlots'], variable=self.variable, version=f"v{i}", workflow=currentConfig['execution']))
             i += 1
                 
         return tasks
